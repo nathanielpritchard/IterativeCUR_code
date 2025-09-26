@@ -5,8 +5,8 @@
 # "Haar", "randLOW", "randcorr"
 # N is number of rows
 # B is block size
-# R is rank
-# S is number of samples performed
+# R is rank of the generated matrix
+# S is number of trials performed
 # O is oversample percent of size (as a decimal) 
 # E is stopping threshold
 # I is the maxit can either be zero or nonzero if nonzero runs for rank/blocksize iterations
