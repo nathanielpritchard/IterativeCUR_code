@@ -34,7 +34,7 @@ addpath("./curers")
 addpath("./error_methods")
 addpath("./index_selection")
 addpath("./over_sample_res")
-```.
+```
 After doing this you can run the `IterativeCUR` function. This function will return 
 five outputs the approximate error at each iteration, C, U(Q from QR factor of core), T (R from QR factor of core), and R.
 You can reconstruct the approximation based on these outputs by calling `C / T * (U' * R)`. The function also has 8 inputs
