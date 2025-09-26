@@ -1,0 +1,86 @@
+\begin{tikzpicture}[scale = \boxplotscale, anchor = west]
+	\pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_lupp_better_accuracy.csv}\luaccdatap
+	\pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_lupp_worse_accuracy.csv}\luaccdatam
+    \pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_svd_better_accuracy.csv}\svdaccdatap
+	\pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_svd_worse_accuracy.csv}\svdaccdatam
+    \pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_lupp_better_time.csv}\lutimedatap
+	\pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_lupp_worse_time.csv}\lutimedatam
+    \pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_svd_better_time.csv}\svdtimedatap
+	\pgfplotstableread[col sep=comma]{./csvs/fixed_rank/experiments_fixed_svd_worse_time.csv}\svdtimedatam
+    \newcommand{\mattype}{Low Rank }
+    \pgfplotscreateplotcyclelist{cross_colors}{cLU, cILU, cIQR, cSVDs}
+	% Boxplot groups columns, but we want rows
+	\begin{axis}[
+        name = axis1,
+		%enlarge y limits,
+		%xlabel = {Size of Matrix},
+        ylabel = {Percent Longer},
+        ytick = {-5, 0, 5, 10, 15, 20},
+        ymin = -5,
+        ymax = 20,
+        ymajorgrids,
+        y label style = {at={(0, .3)}},
+        title = {Time Compared to s-LUPP},
+        cycle list name=cross_colors,
+	]
+		\addplot[only marks, fill = cpos, draw = cpos, draw opacity = \dopa, fill opacity = 2 * \fopa, mark size = \markersize] table[x = matrix_size, y = metric] {\lutimedatap};
+		\addplot[only marks, fill = cminus, draw = cminus, draw opacity = \dopa, fill opacity = 2 * \fopa, mark = triangle*, mark size = \markersize + 1] table[x = matrix_size, y = metric] {\lutimedatam};
+		
+	\end{axis}
+        	\begin{axis}[
+        name = axis2,
+        at={(axis1.outer north east)},
+        anchor=outer north west,
+		%xlabel = {Size of Matrix},
+        %ylabel = {Percent Longer},
+        ytick = {-5, 0, 5, 10, 15, 20},
+        ymin = -5,
+        ymax = 20,
+        ymajorgrids,
+        title = {Accuracy Compared to s-LUPP},
+        cycle list name=cross_colors,
+        legend pos = north east,
+	]
+		
+		\addplot[only marks, fill = cpos, draw = cpos, draw opacity = \dopa, fill opacity = 2 * \fopa, mark size = \markersize] table[x = matrix_size, y = metric] {\luaccdatap};
+		\addplot[only marks, fill = cminus, draw = cminus, draw opacity = \dopa, fill opacity = 2 * \fopa, mark = triangle*, mark size = \markersize + 1] table[x = matrix_size, y = metric] {\luaccdatam};
+        \legend{IterativeCUR Better, IterativeCUR Worse}
+	\end{axis}
+	\begin{axis}[
+        name = axis3,
+        at={(axis1.outer south west)},
+        anchor=outer north west,
+		%enlarge y limits,
+		xlabel = {Size of Matrix},
+        ylabel = {Percent Longer},
+        y label style = {at={(0, .3)}},
+        ytick = {-5, 0, 5, 10, 15, 20},
+        ymin = -5,
+        ymax = 20,
+        ymajorgrids,
+        title = {Time Compared to SVD},
+        cycle list name=cross_colors,
+	]
+		\addplot[only marks, fill = cpos, draw = cpos, draw opacity = \dopa, fill opacity = 2 * \fopa, mark size = \markersize] table[x = matrix_size, y = metric] {\svdtimedatap};
+		\addplot[only marks, fill = cminus, draw = cminus, draw opacity = \dopa, fill opacity = 2 * \fopa, mark = triangle*, mark size = \markersize + 1] table[x = matrix_size, y = metric] {\svdtimedatam};
+		
+	\end{axis}
+        	\begin{axis}[
+        name = axis4,
+        at={(axis3.outer north east)},
+        anchor=outer north west,
+		xlabel = {Size of Matrix},
+        %ylabel = {Percent Longer},
+        ytick = {-5, 0, 5, 10, 15, 20},
+        ymin = -5,
+        ymax = 20,
+        ymajorgrids,
+        yminorgrids,
+        title = {Accuracy Compared to SVD},
+        cycle list name=cross_colors,
+	]
+		
+		\addplot[only marks, fill = cpos, draw = cpos, draw opacity = \dopa, fill opacity = 2 * \fopa, mark size = \markersize] table[x = matrix_size, y = metric] {\svdaccdatap};
+		\addplot[only marks, fill = cminus, draw = cminus, draw opacity = \dopa, fill opacity = 2 * \fopa, mark = triangle*, mark size = \markersize + 1] table[x = matrix_size, y = metric] {\svdaccdatam};
+	\end{axis}
+\end{tikzpicture}

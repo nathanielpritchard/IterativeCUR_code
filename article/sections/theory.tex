@@ -1,0 +1,91 @@
+With an understanding of the algorithm, we now focus on the theoretical performance of IterativeCUR (\icur). 
+In this section, 
+we first describe the connections between IterativeCUR and existing algorithms in the literature to indicate why it works well in practice.  
+We then derive a bound that provides some insight into the inner workings of IterativeCUR. 
+
+\subsection{{Connections to existing algorithms}}\label{subsec:connection}
+Adaptive pivoting strategies form a powerful class of methods for the column subset selection problem (CSSP). 
+Possibly the first such algorithm was introduced by 
+Deshpande and Rademacher~\cite{deshpande2006adaptive}, where a column is chosen with probability proportional to the squared column norm of the current residual with an interpolative decomposition, i.e., $\mat A-\mat{CC}^\dagger \mat A$. 
+When $\mat A$ is positive semidefinite, significant simplifications ensue, resulting in the Randomly pivoted Cholesky algorithm, for which an efficient implementation and extensive theory have been developed in~\cite{chen2025randomly}. 
+
+Let us now consider IterativeCUR from this viewpoint. Just like the adaptive sampling method of Deshpande-Vempala's, we update the sampling strategy based on the current residual. There are two notable differences: (i) Our goal is CUR, not $\mat{CC}^\dagger \mat{A}$ (which is significantly more expensive); accordingly our residual is  $\mat A-\mat{CUR}$ instead of $\mat A-\mat C\mat C^\dagger \mat A$. 
+(ii) In IterativeCUR we find the pivots via (usually LUPP applied to) a sketched residual $\mat G(\mat{A}-\mat{CUR})$. As discussed above, this is a powerful strategy to find pivots for CSSP applied to the residual, and more efficient than computing the column norms of the residuals every time. 
+Despite these differences, IterativeCUR can be seen as a variant of Deshpande-Vempala's method where CUR is the objective and a sketched pivoting strategy is used (which is empirically at least equally powerful) instead of norm-wise sampling. These close connections to existing adaptive sampling methods explain why IterativeCUR is expected to work, at least qualitatively. 
+
+
+\subsection{Error bound}\label{subsec:error}
+With intuition for the expected behavior of IterativeCUR, we now derive an error bound for IterativeCUR. Deriving this bound relies on an index selection method proposed by \cite{osinsky2025close} as opposed to the QR with column pivoting (QRCP) and LU with partial pivoting (LUPP) approaches suggested in \cref{sec:alg}. We do so because \cite{osinsky2025close} has stronger and more interpretable theoretical bounds than the LUPP or QRCP approaches, and in practice performs only slightly better than the LUPP or QRCP selection approaches \cite{cortinovis2024adaptive}. %It should be noted that while we obtain a bound indicating that IterativeCUR should perform far worse than its fixed rank counterparts, this performance gap has not been observed in practice (see \cref{sec:exp}).
+
+
+To derive our bound, we rely on the cross-approximation result from Osinsky \cite{osinsky2025close}. This result applies to the scenario where the row and column indices are selected using \cite[Algorithm 1]{osinsky2025close} and a cross-approximation is used to compute the matrix $\mat U$, as we do in IterativeCUR (\icur). In this scenario, \cite{osinsky2025close} obtains
+\begin{theorem}[Theorem 2 \cite{osinsky2025close}] \label{thm:osinsky}
+    Let $\mat A,\mat Z\in \real^{m \times n}$ where $\mat Z$ is a rank-$r$ approximation to $\mat A$. Then it is possible to find columns indices, $J$, and row indices, $I$ of the matrix $\mat A$, such that 
+    \begin{equation}
+        \|\mat A - \mat A(:,J) \mat A(I,J)^\dagger \mat A(I,:)\|_F \leq (r+1) \|\mat A - \mat Z\|_F
+    \end{equation}
+    and that 
+    \begin{equation}
+        \|\mat A - \mat A(:,J) \mat A(I,J)^\dagger \mat A(I,:)\|_2 \leq \sqrt{1 + r(r+2)(\min(m,n) - r)} \|\mat A - \mat Z\|_2.
+    \end{equation}
+\end{theorem}
+
+It is important to note that this bound applies for any rank-$r$ subspace. To make use of this result, we first derive a recursive relationship on the CUR residual. Then we repeatably apply \cref{thm:osinsky} to rank-$b$ subspace approximations to the residual at each iteration. For the residual recursion of CUR residual we have
+
+\begin{lemma} \label{lemma:recurrence}
+Let $\mat A \in \real^{m \times n}$, and let $\mat A_{I,J} = \mat A(:, J) \mat A(I,J)^\dagger \mat A(I,:)$ be the CUR approximation to the matrix $\mat A$ with row indices, $I$, and columns indices $J$. Then for some other set of row indices $I_+$ and $J_+$ we  have 
+    \begin{equation}
+        \mat{A} - \mat{A}_{I\cup I_+, J\cup J_+} = \mat{A} - \mat{A}_{I,J} - \mat{S}_{I_+,J_+} ( = \mat{S} - \mat{S}_{I_+,J_+})
+    \end{equation} where $\mat{S} = \mat{A} - \mat{A}_{I,J}$ and $\mat{S}_{I_+,J_+} = \mat S(:, J_+) \mat S(I_+,J_+)^\dagger \mat S(I_+,:)$.
+\end{lemma}
+\begin{proof}
+First, by expanding $\mat{A}_{I\cup I_+, J\cup J_+}$ we get
+    \begin{align*}
+        \mat{A}_{I\cup I_+,J\cup J_+} = \onetwo{\mat{A}(:,J)}{\mat{A}(:,J_+)}\twotwo{\mat{A}(I,J)}{\mat{A}(I,J_+)}{\mat{A}(I_+,J)}{\mat{A}(I_+,J_+)}^\dagger \twoone{\mat{A}(I,:)}{\mat{A}(I_+,:)}.
+    \end{align*} Now define $\mat{C} = \mat{A}(:,J),\mat{C}_0 = \mat{A}(:,J_+), \mat{R} = \mat{A}(I,:),\mat{R}_0 = \mat{A}(I_+,:), \mat{U}_{11} = \mat{A}(I,J),$ $\mat{U}_{10} = \mat{A}(I,J_+),\mat{U}_{01} = \mat{A}(I_+,J),\mat{U}_{00} = \mat{A}(I_+,J_+)$ for shorthand. Let us use the block inversion formula to expand the pseudoinverse term.
+    \begin{equation}
+        \twotwo{\mat{U}_{11}}{\mat{U}_{10}}{\mat{U}_{01}}{\mat{U}_{00}}^\dagger = \twotwo{\mat{U}_{11}^\dagger + \mat{U}_{11}^\dagger \mat{U}_{10} \mat{N}^{-1}\mat{U}_{01}\mat{U}_{11}^\dagger }{-\mat{U}_{11}^\dagger \mat{U}_{10} \mat{N}^\dagger}{-\mat{N}^\dagger \mat{U}_{01}\mat{U}_{11}^\dagger }{\mat{N}^\dagger}
+    \end{equation} where $\mat{N} = \mat{A}(I_+,J_+) - \mat{A}(I_+,J)\mat{A}(I,J)^\dagger \mat{A}(I,J_+) = \mat{U}_{00} - \mat{U}_{01}\mat{U}_{11}^\dagger \mat{U}_{10}$. Therefore,
+    \begin{align*}
+        \mat{A}_{I\cup I_+,J\cup J_+}  &= \mat{C}\mat{U}_{11}^\dagger \mat{R} + \mat{C}\mat{U}_{11}^\dagger \mat{U}_{10}\mat{N}^\dagger \mat{U}_{01}\mat{U}_{11}^\dagger \mat{R} - \mat{C}_0 \mat{N}^\dagger \mat{U}_{01}\mat{U}_{11}^\dagger \mat{R}\\
+        & \indent  - \mat{C}\mat{U}_{11}^\dagger \mat{U}_{10}\mat{N}^\dagger \mat{R}_0 + \mat{C}_0 \mat{N}^\dagger \mat{R}_0 \\
+        &= \mat{C}\mat{U}_{11}^\dagger \mat{R} + (\mat{C}_0 - \mat{C}\mat{U}_{11}^\dagger \mat{U}_{10})\mat{N}^\dagger (\mat{R}_0 - \mat{U}_{01}\mat{U}_{11}^\dagger \mat{R}) \\
+        &= \mat{A}_{I,J} + \mat{S}(:,J_+) \mat{S}(I_+,J_+)^\dagger \mat{S}(I_+,:) \\
+        &= \mat{A}_{I,J} + \mat{S}_{I_+,J_+},
+    \end{align*} which concludes the proof.
+\end{proof}
+
+\cref{lemma:recurrence} can naturally be thought of as a variant of a continuation of a block LU with complete pivoting procedure with the starting pivots $I$ and $J$ and to which a set of new pivots $I_+$ and $J_+$ is appended. Also, the CUR decomposition of $\mat{A}$ with $I\cup I_+$ and $J\cup J_+$ equals the CUR decomposition of $\mat{A}$ with $I$ and $J$ plus the CUR decomposition of the residual matrix $\mat{S} = \mat{A}-\mat{A}_{I,J}$ with $I_+$ and $J_+$. For a series of sets of indices $I_1,..., I_k$ and $J_1,..., J_k$, \cref{lemma:recurrence} implies
+\begin{equation} \label{eq:recurrencenorm}
+    \norm{\mat{A} - \mat{A}_{\bigcup\limits_{j=1}^k I_j,\bigcup\limits_{j=1}^k J_j}} = \prod_{i = 1}^k \frac{\norm{\mat{S}^{(i)} - \mat{S}_{I_i,J_i}^{(i)}}}{\norm{\mat{S}^{(i)}}}
+\end{equation} where $\mat{S}^{(i)} = \mat{A} - \mat{A}_{\bigcup\limits_{j=1}^{i-1} I_j,\bigcup\limits_{j=1}^{i-1} J_j}$ and $\mat{S}^{(1)} = \mat{A}$.
+
+
+As \cref{alg:ICUR} obtains a set of $b$ row and column indices per iteration, it allows us to establish the following result. Here, $b$ is the block size.
+
+\begin{theorem} \label{thm:converge}
+    Suppose we run $k$ iterations of \cref{alg:ICUR} with block size $b$ where we use Algorithm 1 in \cite{osinsky2025close} on the row sketch of the residual matrix $\mat{S}^{(i)}$ to obtain the row and column indices. Then we obtain a rank-$(bk)$ CUR approximation to $\mat{A}$ and the CUR decomposition satisfies
+    \begin{equation} \label{eq:errbnd_attemp1}
+        \norm{\mat{A} - \mat{A}_{\bigcup\limits_{j=1}^k I_j,\bigcup\limits_{j=1}^k J_j}}_F \leq (1+b)^k \prod\limits_{i = 1}^k \frac{\norm{\mat{S}^{(i)}-\mat{S}^{(i)}\mat{X}_i^\dagger \mat{X}_i}_F}{\norm{\mat{S}^{(i)}}_F}
+    \end{equation} where $I_j$ and $J_j$ are the row and column indices obtained in the $j$th iteration of \cref{alg:ICUR}, and
+    \begin{equation}
+        \mat{X}_i = \mat{G}\mat{S}^{(i)} = \mat{G}\left(\mat{A} - \mat{A}_{\bigcup\limits_{j=1}^{i-1} I_j,\bigcup\limits_{j=1}^{i-1} J_j}\right).
+    \end{equation} The matrix $\mat{G}\in \real^{b\times m}$ is a sketching matrix.
+\end{theorem}
+\begin{proof}
+    The proof follows by applying result (14) in Theorem 2 of \cite{osinsky2025close} on \cref{eq:recurrencenorm}.
+\end{proof}
+\begin{remark}
+    As $\mat{S}^{(i)}$ is the residual error matrix of the CUR decomposition with the indices $\bigcup_{j=1}^{i-1} I_j$ and $\bigcup_{j=1}^{i-1} J_j$ and hence has connections to the Schur complement, it is generally difficult to quantify the singular values of $\mat{S}^{(i)}$. Roughly, if the set of indices $\bigcup_{j=1}^{i-1} I_j$ and $\bigcup_{j=1}^{i-1} J_j$ are good we expect
+\begin{equation}
+    \norm{\mat{S}^{(i)}}_F \lesssim \sqrt{\sum_{\ell = b(i-1)+1}^n \sigma_\ell (\mat{A})^2}.
+\end{equation} On the other hand, if we ignore the dependency of the sketching matrix $\mat{G}$ with the sets of indices $I_1,..,I_k$ and $J_1,...,J_k$, then $\norm{\mat{S}^{(i)}-\mat{S}^{(i)}\mat{X}_i^\dagger \mat{X}_i}_F$ is the randomized SVD error of $\mat{S}^{(i)}$ with target rank $b$. Therefore, we roughly have
+\begin{equation}
+    \norm{\mat{S}^{(i)}-\mat{S}^{(i)}\mat{X}_i^\dagger \mat{X}_i}_F \lesssim \sqrt{\sum_{\ell = b+1}^n \sigma_\ell \left(\mat{S}^{(i)} \right)^2} \lesssim \sqrt{\sum_{\ell = bi+1}^n \sigma_\ell (\mat{A})^2}.
+\end{equation} If we cancel out the terms in the product \eqref{eq:errbnd_attemp1} in a telescoping way, we very roughly obtain
+\begin{equation}
+    \norm{\mat{A} - \mat{A}_{I,J}}_F \lesssim (1+b)^k \sqrt{\sum\limits_{\ell = bk+1}^n \sigma_\ell (\mat{A})^2} = (1+b)^k \norm{\mat{A} - \lowrank{\mat{A}}{bk}}_F.
+\end{equation}
+\end{remark}
+
+In experiments, we have not observed any cases where IterativeCUR has a relative error worse than twice that of the error from the CUR produced using \cite{osinsky2025close}, even when testing Matlab's gallery matrices with slow spectral decay. This indicates that the suboptimality factor in \cref{thm:converge} is far more conservative than what is observed in practice.  Despite this conservativeness, \cref{thm:converge} provides intuition for IterativeCUR's worst-case performance if IterativeCUR behaved as a wholly greedy algorithm. Specifically, this analysis reveals that at every iteration, the index selection phase aims to capture the best rank-$b$ approximation that, when using \cite{osinsky2025close}, will be a $(b+1)$-suboptimal approximation in the worst case. What is not well-accounted for in this analysis is how using the residual facilitates the selection of indices that correct for suboptimal index selections from previous iterations. This correction seems to be why, as will be demonstrated in the next section, the net effect of these costs and benefits seems to be IterativeCUR performing the same as the sketched and pivoted techniques. 

@@ -1,0 +1,158 @@
+% SIAM Shared Information Template
+% This is information that is shared between the main document and any
+% supplement. If no supplement is required, then this information can
+% be included directly in the main document.
+
+
+% Packages and macros go here
+\usepackage{lipsum}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+%\usepackage{algorithmic}
+\usepackage{algpseudocode }
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{pgfplots}
+\usepgfplotslibrary{colorbrewer, groupplots}
+\usetikzlibrary{pgfplots.statistics, pgfplots.colorbrewer, external}
+\usepackage{pgfplotstable}
+\usepackage{filecontents}
+\usepackage{longtable}
+\usepackage{makecell}
+
+\ifpdf
+  \DeclareGraphicsExtensions{.eps,.pdf,.png,.jpg}
+\else
+  \DeclareGraphicsExtensions{.eps}
+\fi
+
+% Personalized commands
+\newcommand{\nat}{\mathbb{N}}   
+\newcommand{\real}{\mathbb{R}}   
+\newcommand{\ex}{\mathbb{E}}   
+\newcommand{\pr}{\mathbb{P}}     
+\newcommand{\mat}[1]{\boldsymbol{#1}}   
+\renewcommand{\vec}[1]{\boldsymbol{#1}} 
+\newcommand{\norm}[1]{\left\| {#1} \right\|}
+
+\newcommand{\blkmat}[1]{\begin{bmatrix} #1 \end{bmatrix}}
+\newcommand{\twotwo}[4]{\blkmat{#1 & #2 \\ #3 & #4}}
+\newcommand{\twoone}[2]{\blkmat{#1 \\ #2}}
+\newcommand{\onetwo}[2]{\blkmat{#1 & #2}}
+\newcommand{\lowrank}[2]{\left\llbracket #1 \right\rrbracket_{#2}}
+\newcommand{\icur}{\cref{alg:ICUR}}
+\newcommand{\icurl}{IterativeCUR-LUPP}
+\newcommand{\icuro}{IterativeCUR-Osinsky}
+\newcommand{\icurq}{IterativeCUR-QRPP}
+\newcommand{\curs}{s-LUPP}
+\newcommand{\svds}{SVDSketch}
+% comment commands
+\newcommand{\np}[1]{{\color{cyan} [\textbf{NP:} #1]}}
+\newcommand{\yn}[1]{{\color{blue} [\textbf{YN:} #1]}}
+\newcommand{\gm}[1]{{\color{blue} [\textbf{GM:} #1]}}
+\newcommand{\tp}[1]{{\color{blue} [\textbf{TP:} #1]}}
+
+% commands for plotting
+\newcommand{\fopa}{.3}
+\newcommand{\dopa}{1}
+\newcommand{\boxplotscale}{.7}
+
+% colors for plotting
+\definecolor{cSVDs}{RGB}{141, 8, 1}
+\definecolor{cLU}{RGB}{227, 178, 60}
+\definecolor{cIQR}{RGB}{0, 20, 83}
+\definecolor{cILU}{RGB}{12, 155, 107}
+\definecolor{cOS}{RGB}{251, 97, 7}
+\definecolor{cSQR}{RGB}{67, 97, 238}
+\definecolor{cSOS}{RGB}{247, 37, 133}
+\definecolor{cSVD}{RGB}{27, 99, 110}
+\definecolor{cminus}{RGB}{145, 0, 0}
+\definecolor{cpos}{RGB}{79, 120, 59}
+\definecolor{c5}{RGB}{191,67,66}
+\definecolor{c50}{RGB}{231, 215, 193}
+\definecolor{c100}{RGB}{167, 138, 127}
+\definecolor{c500}{RGB}{115, 87, 81}
+\newcommand{\markersize}{1}
+
+\pgfplotsset{
+    numformat single/.style={pgf/number format/#1},
+    numformat/.style={numformat single/.list={#1}},
+    every axis/.append style={
+         width = .5 \textwidth,
+        height = .4 \textwidth,
+        every tick/.style = {xtick pos = left},
+        title style={font=\bfseries},
+        label style={font=\small},
+        ticklabel style={font=\footnotesize},
+        legend style={font=\footnotesize},
+        scaled y ticks = false,
+    },
+    every axis plot/.append style={
+    every mark/.append style={solid,  fill opacity = .7, draw opacity = 1},
+    scur_line/.style = {mark=triangle, mark size = 3pt, color = cLU, dashed},
+    icur_line/.style={mark=square, mark size = 2pt, color = cILU, densely dotted},
+    svds_line/.style={mark=o, mark size = 2pt, color = cSVDs},
+    svd_line/.style={mark=pentagon, mark size = 3pt, color = cSVD, dash dot dot},
+    qr_line/.style={mark=diamond, mark size = 3pt, color = cIQR},
+    os_line/.style={mark=star, mark size = 3pt, color = cOS, dash dot},
+    sos_line/.style={mark=halfcircle, mark size = 1.5pt, color = cSOS},
+    sqr_line/.style={mark=-, mark size=3pt, color = cSQR},
+    bs5_line/.style={mark=pentagon, mark size = 3pt, color = cSVD, dash dot dot},
+    bs50_line/.style={mark=*, mark size = 2pt, color = c500},
+    bs100_line/.style={mark=diamond, mark size = 3pt, color = orange, dashed},
+    bs500_line/.style={mark=triangle, mark size = 3pt, color = black, densely dotted},
+    }
+}
+% Add a serial/Oxford comma by default.
+\newcommand{\creflastconjunction}{, and~}
+
+% Used for creating new theorem and remark environments
+\newsiamremark{remark}{Remark}
+\newsiamremark{hypothesis}{Hypothesis}
+\crefname{hypothesis}{Hypothesis}{Hypotheses}
+\newsiamthm{example}{Example}
+\crefname{example}{example}{examples}
+\newsiamthm{claim}{Claim}
+
+% Sets running headers as well as PDF title and authors
+\headers{Iterative CUR}{N. Pritchard, T. Park, Y. Nakatsukasa, and P.G. Martinsson}
+
+% Title. If the supplement option is on, then "Supplementary Material"
+% is automatically inserted before the title.
+\title{ Fast  Rank Adaptive CUR via a Recycled Small Sketch\thanks{Submitted to the editors September 26, 2025.
+\funding{The work reported was supported by the Office of Naval Research (N00014-
+18-1-2354), by the National Science Foundation (DMS-2313434),
+and by the Department of Energy ASCR (DE-SC0025312). For the purpose of open access, the authors have applied a CC BY public copyright license to any author accepted manuscript arising from this submission.}}}
+
+% Authors: full names plus addresses.
+\author{Nathaniel Pritchard\thanks{Mathematical Institute at the University of Oxford.}
+\and Taejun Park\thanks{Institute of Mathematics at EPF Lausanne.}
+\and Yuji Nakatsukasa\footnotemark[2]
+\and Per-Gunnar Martinsson\thanks{Department of Mathematics and the Oden Institute at the University of Texas at Austin.} 
+}
+
+\usepackage{amsopn}
+\DeclareMathOperator{\diag}{diag}
+
+%% Added on Overleaf: enabling xr
+\makeatletter
+\newcommand*{\addFileDependency}[1]{% argument=file name and extension
+  \typeout{(#1)}% latexmk will find this if $recorder=0 (however, in that case, it will ignore #1 if it is a .aux or .pdf file etc and it exists! if it doesn't exist, it will appear in the list of dependents regardless)
+  \@addtofilelist{#1}% if you want it to appear in \listfiles, not really necessary and latexmk doesn't use this
+  \IfFileExists{#1}{}{\typeout{No file #1.}}% latexmk will find this message if #1 doesn't exist (yet)
+}
+\makeatother
+
+\newcommand*{\myexternaldocument}[1]{%
+    \externaldocument{#1}%
+    \addFileDependency{#1.tex}%
+    \addFileDependency{#1.aux}%
+}
+%%% END HELPER CODE
+%%% Local Variables: 
+%%% mode:latex
+%%% TeX-master: "ex_article"
+%%% End: 

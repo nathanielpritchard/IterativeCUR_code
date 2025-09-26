@@ -1,0 +1,73 @@
+\begin{tikzpicture}[scale = \boxplotscale, anchor = west]
+	\pgfplotstableread[col sep=comma]{./csvs/synthetic/hilbert_30000_10_0_overall_accuracy.csv}\accdata
+    \pgfplotstableread[col sep=comma]{./csvs/synthetic/hilbert_30000_10_0_n_cols.csv}\coldata
+    \pgfplotstableread[col sep=comma]{./csvs/synthetic/hilbert_30000_10_0_time.csv}\timedata
+    \newcommand{\mattype}{\textsc{Hilbert} }
+    
+    \pgfplotscreateplotcyclelist{cross_colors}{cLU, cILU, cSVDs}
+	% Boxplot groups columns, but we want rows
+	\begin{axis}[
+        name = axis1,
+		boxplot/draw direction = x,
+		x axis line style = {opacity=0},
+		axis x line* = bottom,
+		axis y line = left,
+		enlarge y limits,
+		xmajorgrids,
+        title = {Accuracy for \mattype Matrix},
+		ytick = {1, 2, 3, 4},
+		yticklabel style = {align=center, font=\small, rotate=0},
+		yticklabels = {\curs, \icurl, \svds},
+		ytick style = {draw=none}, % Hide tick line
+		xlabel = {$\frac{\|A - \hat{A}_k\|_F}{\|A\|_F}$},
+        cycle list name=cross_colors,
+	]
+		\foreach \n in {1,...,3} {
+			\addplot+[boxplot, fill, draw, draw opacity = \dopa, fill opacity = \fopa] table[y index=\n] {\accdata};
+		}
+	\end{axis}
+        	\begin{axis}[
+        name = axis2,
+        at={(axis1.outer north east)},
+        anchor=outer north west,
+		boxplot/draw direction = x,
+		x axis line style = {opacity=0},
+		axis x line* = bottom,
+		axis y line = left,
+		enlarge y limits,
+		xmajorgrids,
+        title = {Columns for \mattype Matrix},
+		ytick = {1, 2, 3, 4},
+		yticklabel style = {align=center, font=\small, rotate=0},
+		yticklabels = {\curs, \icurl, \svds},
+		ytick style = {draw=none}, % Hide tick line
+		xlabel = {Rank},
+        cycle list name=cross_colors,
+	]
+		\foreach \n in {1,...,3} {
+			\addplot+[boxplot, fill, draw, draw opacity = \dopa, fill opacity = \fopa] table[y index=\n] {\coldata};
+		}
+	\end{axis}
+            	\begin{axis}[
+		boxplot/draw direction = x,
+         at={(axis1.outer south east)},
+        anchor=outer north,
+		x axis line style = {opacity=0},
+		axis x line* = bottom,
+		axis y line = left,
+		enlarge y limits,
+		xmajorgrids,
+        title = {Time for \mattype Matrix},
+		ytick = {1, 2, 3, 4},
+		yticklabel style = {align=center, font=\small, rotate=0},
+		yticklabels = {\curs, \icurl, \svds},
+		ytick style = {draw=none}, % Hide tick line
+		xlabel = {Time (seconds)},
+        cycle list name=cross_colors
+	]
+		\foreach \n in {1,...,3} {
+			\addplot+[boxplot, fill, draw, draw opacity = \dopa, fill opacity = \fopa] table[y index=\n] {\timedata};
+		}
+	\end{axis}
+\end{tikzpicture}
+

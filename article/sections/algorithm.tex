@@ -1,0 +1,218 @@
+ With an understanding of the ideas and techniques underlying the CUR decomposition, we now lay out the intuition and details for IterativeCUR. This discussion will first overview the IterativeCUR algorithm (\icur). After overviewing IterativeCUR, we will discuss important aspects of IterativeCUR. In particular, we will discuss how IterativeCUR selects row and column indices, which will reveal how IterativeCUR  iteratively constructs the CUR decomposition. With this intuition for constructing the decomposition, we will then discuss stopping IterativeCUR via a computationally efficient a posteriori estimator and stopping criterion. We then finish this section by totaling the computational complexity of IterativeCUR.
+
+
+\subsection{Overview of IterativeCUR}
+When the rank of a matrix is unknown, we usually want to form a CUR approximation that satisfies $\|\mat A - \mat C \mat U \mat R\|_2 / \|\mat A\|_2 < \epsilon$. A na\"ive approach for creating an $\epsilon$-accurate CUR approximation selects a set of $b$ column indices, $J$, a set of $b$ row indices, $I$, and computes the residual of the CUR decomposition,
+\begin{equation}
+    \mat S = \mat A - \mat C \mat U \mat R.
+\end{equation}
+From this residual, one then selects $b$ additional column indices, $J_+$, and $b$ additional row indices, $I_+$. These indices are then appended to the previously selected sets so that $J = [J, J_+]$ and $I = [I, I_+]$ after which a new residual is computed. This process is repeated until $\|\mat A -\mat C \mat U \mat R\|_F/ \|\mat A\|_F < \epsilon$. Although this na\"ive approach can be performed for small matrices, for large matrices, this na\"ive approach becomes computationally impractical owing to the $\mathcal{O}(mnr)$ computational complexity and the expense of having to access the full matrix $\mat A$ at each iteration. 
+
+
+At a high level, IterativeCUR (\cref{alg:ICUR}) performs the na\"ive approach, using a single sketch of $\mat S$, $\mat G \mat S \in \real^{c \times n}$ with $m \gg c > b$ and a block subset of the columns of $\mat S$. Specifically, at each iteration, IterativeCUR selects a new block of column indices, $J_+$, by applying an index selection procedure, such as partially pivoted LU (LUPP), to $\mat G \mat S$. Then once $J_+$, is selected, ItereativeCUR selects a new set of row indices, $I_+$, by applying an index selection procedure to the matrix $\mat S(:, J_+)$.  Once the new row and column indices are selected, IterativeCUR updates the matrices $\mat C, \mat U, \mat R$, by computing a new residual $\mat G\mat S$, and repeating this procedure until $\|\mat G \mat S\|_F / \| \mat G \mat A\|_F < \epsilon$. 
+
+In total, for a dense matrix, IterativeCUR forms an $\epsilon$-accurate approximation to a matrix $\mat A$ in $\mathcal{O}(mn + (m+n)r^2 + r^3)$ operations where $r$ is the rank of the $\epsilon$-accurate approximation.
+This computational complexity is comparable to other efficient rank-adaptive randomized SVD algorithms, e.g. SVDsketch \cite{yu2018efficient}. However, unlike SVDSketch, which uses $\|\mat A - \widehat{\mat{A}}\|_F^2$ to make stopping decisions and can only provide approximations up to $10^{-8}$ when using double precision arithmetic, IterativeCUR makes stopping decisions using $\|\mat{GA} - \mat{GCUR}\|_F$ allowing it to generate approximations that are accurate to near machine precision.
+
+\begin{algorithm}[h]
+\caption{Iterative CUR}
+        \hspace*{\algorithmicindent } \textbf{Input:}  \\ \hspace*{\algorithmicindent }  \quad $\epsilon > 0$ \Comment{The desired quality of $\|\mat A - \mat C \mat U \mat R\|/\|\mat A\|_F$}\\  \hspace*{\algorithmicindent } \quad $b > 0$ \Comment{ Block/sketch size; usually $5\leq b\leq 250$
+        %setting $b$ between 5 and 250 should suffice
+        }\\  \hspace*{\algorithmicindent} \quad $\textbf{Column Selection}$ \Comment{LUPP as default could use QRCP or Osinsky \cite{osinsky2025close}} \\ \hspace*{\algorithmicindent} \quad $\textbf{Row Selection}$ \Comment{LUPP as default could use QRCP or Osinsky \cite{osinsky2025close}}\\
+        \hspace*{\algorithmicindent} \textbf{Output:} $\mat C$, $\mat U$, $\mat R$
+    \label{alg:ICUR}
+    \begin{algorithmic}[1]
+        \Procedure{IterativeCUR}{$b$, $\epsilon$, \textbf{Column Selection}, \textbf{Row Selection}}
+        \State Generate a sketch matrix $ \mat G \in \mathbb{R}^{\lfloor 1.1b \rfloor \times n}$
+        \State $J = \emptyset$, $I = \emptyset$, $\mat U = I$, $\mat C = \emptyset$, $\mat R=\emptyset$
+        \State $ \mat S^{\rm col}_0 = \mat G \mat A$ \label{alg:initial-sketch}
+        \State $\rho_0 = \|\mat S^{\rm col}_0\|_F / \|\mat G \mat A\|_F$ %\tp{Also is the denominator not $\mat{GA}$?}
+        \State $k = 0$
+         \While{$\rho > \epsilon$}
+           \State $J_k \leftarrow \textbf{Column Selection} (\mat S^{\rm col}_k)$
+           \State $\mat  S^{\rm row}_k = \mat A(:,J_k) - \mat C_k \mat U_k \mat R_k(:, J_k)$ \label{alg:right-res} \Comment{Compute row residual}
+           \State $J \leftarrow [J, J_k]$
+           \State $I_k \leftarrow \textbf{Row Selection}(\mat S^{\rm row}_k)$
+           \State $I \leftarrow [I, I_k]$
+           \State $\mat U_k \leftarrow \mat A(I,J)^\dagger$ \Comment{Default QR, improved efficiency with LU}  
+           \State $\mat C_k \leftarrow \mat A(:,J)$,  $\mat R_k \leftarrow \mat A(I,:)$ \label{alg:update}
+           \State $\mat S^{\rm col}_k \leftarrow \mat G \mat A -\mat G \mat C_k \mat U_k \mat R_k$ \Comment{Use $\mat {GC}_k$ from $\mat{GA}$}
+           \label{alg:left-res}
+           \State $\rho_k \leftarrow \|\mat  S^{\rm col}_k\|_F /\|\mat G\mat A\|_F$\label{alg:left-res-norm} %\tp{Denominator $GA$?}
+           \State $k \leftarrow k+1$
+        \EndWhile   
+    \EndProcedure
+    \end{algorithmic}
+\end{algorithm}
+
+
+\subsection{Index Selection}
+With an overview of IterativeCUR, we now examine the details of the algorithm. We begin with its approach to selecting row and column indices. For this discussion, we rely on the observation by \cite{park2025accuracy} that when using the cross-approximation form of $\mat U$, $\mat A(I,J)^\dagger$, row and column indices should be selected in a dependent manner to ensure the numerical stability of the approximation. 
+That is, if we first select a set of column indices, $J$, we should choose row indices using only the selected columns, i.e. $\mat A(:,J)$, or we risk the core matrix being poorly conditioned. For example, when performing CUR on the matrix 
+\begin{equation*}
+    A = 
+    \begin{bmatrix}
+    0 & \frac{1}{\sqrt{n}} & \dots & \frac{1}{\sqrt{n}} \\
+        \frac{1}{\sqrt{n}}+\eta & 0 & \dots & 0
+    \end{bmatrix} \in \real^{2\times (n+1)}
+\end{equation*}
+we can apply QR with Column Pivoting (QRCP) to the the rows and columns independently to form a rank-one approximation. If $\eta + 1 / \sqrt{n} < 1$, selecting rows and columns independently will result in us selecting the first row and first column of the matrix, meaning the cross approximation core will be $1/0$. On the other hand, if instead we were to select entries dependently by selecting columns and then rows, we would select the first column and second row, resulting in $1 / (\eta + 1/\sqrt{n})$ being the core matrix.
+
+
+With an understanding of the need for dependent index selection, in the remainder of this subsection, we present intuition for how to select column indices using $\mathcal{O}(bn)$ memory. Then we present how to use the selected columns to select row indices using $\mathcal{O}(bm)$ memory.
+
+
+\subsubsection{Column Selection}
+To ensure that selecting column indices at each iteration of IterativeCUR incurs the same, small, constant computational and storage cost, we select column indices from the sketched residual matrix, $\mat G(\mat A- \mat C\mat U\mat R)$ where $\mat G \in \real^{c \times m}$, $m \gg c \geq b$, is a random matrix with Gaussian entries. Authors have repeatably shown that selecting indices from such a sketch of a matrix is highly effective \cite{chen2020efficient, duersch2020randomized, dong2023simpler,  martinsson2017householder, melgaard2015gaussian, pearce2025adaptive}. Typically, these authors select these indices using QR with column pivoting (QRCP) or LU with partial pivoting (LUPP).\footnote{There is no reason in principle why one could not also use sampling techniques such as leverage score sampling to perform the selection \cite{mahoney2009cur}.} Interestingly, applying LUPP or QRCP to a sketch of $\mat A$ typically results in better index selection than applying either technique to $\mat A$ directly \cite{dong2024robust, duersch2020randomized}. 
+
+The success of pivoting on a sketch of $\mat A$ over pivoting directly on $\mat A$ may at first seem surprising. However, the success becomes clearer when we consider that, as \cref{thm:rangefinder} demonstrates, sketching $\mat A$ results in a representation that approximately captures the dominant $b$-dimensional subspace of $\mat A$. Therefore, when we pivot on a sketch of $\mat A$, we select columns that best align with an approximation to the subspace most important for selecting the indices that lead to the most accurate approximation of $\mat A$ \cite{cortinovis2024adaptive, osinsky2025close}. In this way, approaches that pivot on a sketch behave more similarly to approaches that use the true best $b$-dimensional approximation to $\mat A$ like DEIM \cite{chaturantabut2010nonlinear,sorensen2016deim} or Osinsky \cite{osinsky2025close}.
+
+Considering that much like \cite{pearce2025adaptive}, IterativeCUR operates on the residual of the previous iteration's CUR approximation, sketching at each iteration reveals an approximation to the best $b$-dimensional subspace of that residual matrix.  This means that when IterativeCUR uses a pivoting approach to select indices from the sketched residual, the selected indices will closely align with the dominant directions left unexplained by the previous iteration's CUR approximation.
+
+This intuition of index selection leads to two distinct implications for the nature of IterativeCUR. First, because IterativeCUR makes selection decisions with only $b$-dimensional information rather than the ideal $\min\{m,n\}$-dimensional information, IterativeCUR is a greedy algorithm.  Second, by selecting the indices that most align with the dominant directions of the residual, IterativeCUR is able to select indices that correct for a previous iteration's poorly selected indices, if any. In other words, IterativeCUR is a self-correcting algorithm. As we will see in \cref{sec:exp}, these two implied behaviors mean that IterativeCUR is aware of the mistakes caused by its greed and able to correct for them, which leads it to exhibit what we term a \textit{conscientiously greedy} behavior. 
+
+Aside from the selection method, another important aspect of IterativeCUR's column selection is the reuse of a single $\mathcal{O}(1)$ sketch. Computationally, the benefits of reusing a sketch are obvious: we only need to access the full matrix once for $b$ matrix-vector products, in line 3 of \cref{alg:ICUR}.  At the same time, the potential drawback is that the dependency between the sketches could lead to a systematic avoidance of important vectors. Fortunately, other authors who have considered reusing a sketch in pivoting on a sketch procedures such as \cite{chen2020efficient, martinsson2017householder} have not observed this to be the case. This is remarkable when we note that the residual of RandomizedSVD $\mat{A}-\mat{AVV}^T$ is orthogonal to the sketch, i.e., $\mat{G}(\mat{A}-\mat{AVV}^T)=\mat{0}$, by construction. Here, $(\mat{GA})^T=\mat{VR}$ is the economical QR factorization. 
+
+To see why dependency is not nearly as problematic as we might expect in CUR, we consider the following contrived example.
+
+\begin{example}
+    Let $\mat A = \begin{bmatrix}
+        c_1 v_1 & c_2 v_2 & c_3 v_3
+    \end{bmatrix} \in \real^{3\times 3}$ where $c_1 > c_2> c_3 > 0$ and $v_1,v_2,v_3$ orthonormal. Additionally, assume that we generate a single sketching vector $g = d_2 v_2 + d_3 v_3$, where $d_2 > d_3 >0$. Finally, for simplicity, assume that $v_2(2) > v_2(1) >v_2(3) >0$ and that $v_1(2) = v_3(2) > 0$. Now, let us consider using IterativeCUR to form a rank-2 approximation of the matrix $\mat A$. It should be clear that the best approximation includes the first and second columns of $\mat A$. We now see what happens when we apply IterativeCUR reusing the sketching vector $g$, which is pathological in that it is orthogonal to the first column of $\mat A$.
+    \vspace{1em}
+
+    Iteration 1: Applying the sketching vector $g$ to $\mat A$ we obtain:
+    \begin{equation}
+        g^\top \mat A = \begin{bmatrix}
+            0 & c_2 d_2 & c_3 d_3
+        \end{bmatrix}.
+    \end{equation}
+    Taking the norms of the columns of $g^\top \mat A$, it is obvious based on the relationships between $c_2,d_2$ and $c_3, d_3$ that we would select the second column. Using our knowledge about the entries of $v_2$ we know that the second entry has the largest row and thus we select the second row. 
+    \vspace{1em}
+
+    Iteration 2:
+    Selecting the second column and second row of $\mat A$ means that the residual after the first iteration is:
+    \begin{align}
+        g^\top & (\mat A - \mat C \mat U \mat R) \\
+        &= g^\top \left(\begin{bmatrix}
+        c_1 v_1 & c_2 v_2 & c_3 v_3
+        \end{bmatrix} - \frac{c_2 v_2}{c_2 v_2(2)}  \begin{bmatrix}
+            c_1v_1(2) & c_2v_2(2) & c_3v_3(2)
+        \end{bmatrix}\right)\\
+        &=\begin{bmatrix}
+            -\frac{c_1 d_2}{v_2(2)} v_1(2) & 0& c_3 d_3 - \frac{c_3 d_2}{v_2(2)} v_3(2)
+        \end{bmatrix}
+    \end{align}
+    Using the constant relations defined at the beginning of the example, we select the first column and obtain the optimal rank-2 approximation of the matrix $\mat A$. 
+\end{example}
+
+In this example, we see how selecting from the residual mitigates the dependency of index selection that comes from reusing a single sketching vector. Superficially, this example's sketching vector is bad because it has no components aligned with the most important vector. However, using the residual mitigates much of the badness of the reused sketch because the sketched residual punishes columns most aligned with the second column and rewards those that are both large and not aligned with the second column. This results in IterativeCUR still selecting the first column in the second iteration, as we would hope. Of course, this mitigation is not perfect. If we were to allow $v_1(2) = v_3(2) = 0$, then we would select incorrect indices. However, when we consider that we typically use a sketch size greater than one and that a Gaussian vector is orthogonal to any particular vector with probability zero, then we can see how, provided that we are selecting enough indices, it is difficult to construct situations where,  even when reusing the sketch, IterativeCUR will select many bad indices. 
+
+ \subsubsection{Row Selection}
+ Because IterativeCUR uses the cross-approximation as its core matrix, it is important that entries at the intersection of the selected rows and selected columns form a non-singular matrix. Superficially, there are two ways we can ensure that we select rows that interact well with the previously selected columns. We can either choose the rows by pivoting on the residual at \textbf{all} previously selected columns or we can choose rows by looking at the residual at only \textbf{the most recently} selected columns. It turns out that, if we look carefully at the residual of the CUR decomposition, in the context of IterativeCUR, these choices are equivalent. First, if we let $I$ be the set of selected row indices and $J$ be the set of selected column indices. We define $I^c = \{k: k \in [1, \dots, m] \cap k \not\in I\}$ and $J^c = \{k: k \in [1, \dots, n] \cap k \not\in J\}$. We let $\mat C = [\mat A(I, J)^\top\,\, \mat A(I^c,J)^\top]^\top$, $\mat R = [\mat A(I, J)\,\, \mat A(I,J^c)]$, and $\mat U = \mat A(I,J)^\dagger$
+ (which here we assume is square and nonsingular, as would almost always be the case in IterativeCUR), for an appropriately pivoted $\mat A$ the residual of a particular CUR, $\mat{S} = \mat{A} - \mat{C} \mat{U} \mat{R}$, is
+
+\begin{align*}
+    \mat{S} = \begin{bmatrix}
+        \mat{A}(I,J) & \mat{A}(I, J^c)\\
+        \mat{A}(I^c, J) & \mat{A}(I^c, J^c)
+    \end{bmatrix} - 
+    &\begin{bmatrix}
+        \mat{A}(I, J)\\
+        \mat{A}(I^c,J)
+    \end{bmatrix}
+    \begin{bmatrix}
+        \mat{A}(I,J)
+    \end{bmatrix}^{\dagger}
+    \begin{bmatrix}
+        \mat{A}(I,J) & \mat{A}(I,J^c)
+    \end{bmatrix}\\ &= 
+    \begin{bmatrix}
+        \mat 0 & \mat 0\\
+        \mat 0 &  \mat{A}(I^c, J^c) -  \mat{A}(I^c,J)  \mat{A}(I,J)^{-1} \mat{A}(I, J^c)
+    \end{bmatrix}.
+\end{align*}
+Looking at the residual matrix $\mat S$, it is clear that the residual entries corresponding to previously selected rows, $I$, and columns, $J$, are $\mat 0$. Thus, for a new selected set of column indices $J_+$, the row indices that best align with the selected columns $J \cup J_+$ can only be determined using $\mat S(:,J\cup J_+)$. Since $\mat S(:,J) = \mat 0$, selecting rows from $\mat S(:,J\cup J_+)$ is equivalent to selecting rows from $\mat S(:, J_+)$. This reduction allows for row selections to be performed with similar computational complexities and memory costs to those incurred while selecting columns.
+
+
+\subsection{Stopping IterativeCUR} \label{subsec:stopping}
+With an understanding of how IterativeCUR updates its low-rank approximation, we now discuss how to cheaply determine when an $\epsilon$-accurate solution has been achieved. In a perfect world, we would be able to use the relative Frobenius norm of the residual as an estimator, $\|\mat A - \mat C \mat U \mat R\|_F / \|\mat A\|_F$. Of course, computing this quantity requires that we access the full $\mat A$ at each iteration, which is expensive. To avoid this computational expense, we use the Frobenius norm of the sketched residual as an estimate of this quantity (see line \ref{alg:left-res-norm}). 
+
+ Although careful analysis by \cite{pearce2025adaptive} has shown that the norm of the sketched residual is an extremely accurate estimator, it is still reasonable to want to control the amount that the norm of the sketched residual deviates from the norm of the full residual. To come up with a criterion that provides the user with such control when stopping IterativeCUR, we rely on the probabilistic bound derived by \cite{gratton2018improved} when the sketching matrix is Gaussian. Specifically, the bound is 
+\begin{theorem}[Theorem 3.1 \cite{gratton2018improved}] \label{thm:gratton-bounds}
+    Let $\mat A \in \real^{m \times n}$ be a matrix of rank $r$ whose Frobenius norm is to be estimated, and let $\mat G \in \real^{c \times m}$ be a matrix with independent mean zero variance $1 / c$ Gaussian entries. Then for any $\tau > 1$
+    \begin{equation}
+        \pr\left[ \|\mat G \mat A\|_F \leq (1/\tau) \|\mat A\|_F\right] \leq \exp\left( -\frac{c(\tau ^2- 1)^2}{4 \tau^4}\right).
+    \end{equation}
+\end{theorem}
+
+Using the bound from \cite{gratton2018improved}, we wish to determine an adjustment to $\epsilon$ that will provide high-probability guarantees that the deviation of $\|\mat G\mat A\|_F$ from $\|\mat A\|_F$ does not result in IterativeCUR stopping before the desired quality of approximation has been reached. To do this, we allow the user to specify $\epsilon$, $\delta >1$ representing the maximum allowable deviation $\|\mat G \mat A\|_F$ from $\|\mat A\|_F$, and $\alpha \in (0,1)$ representing the probability that the $\delta$ deviation is not satisfied. Then combining this information with the bound of \cite{gratton2018improved}, we can derive the following corollary.
+
+\begin{corollary}
+    Given  $\delta >0$, $\epsilon >0$, and selecting $\alpha\in(0,1), c>0$ such that $c>-4\log(\alpha)$, then for matrices $A \in \real^{m \times n}$ and $\mat G \in \real^{c \times m}$ where $\mat G$ has independent mean zero, variance $1 / c$ Gaussian entries if  $\xi =  (1+\delta)\sqrt{1-2\sqrt{-\ln(\alpha)/c}} $ we have 
+
+   \begin{equation}\label{eq:cor-prob}
+       \pr\left[\frac{\|\mat G(\mat A-\mat{CUR})\|_F}{\|\mat{A}\|_F} < \xi \epsilon \ \bigcap \ \frac{\|\mat A-\mat{CUR}\|_F}{\|\mat A\|_F} > (1+\delta)\epsilon \right] \leq \alpha.
+   \end{equation}
+\end{corollary}
+\begin{proof}
+We begin by observing that we can bound \cref{eq:cor-prob}
+    \begin{align}
+        \notag \pr&\left[\frac{\|\mat G(\mat A-\mat{CUR})\|_F}{\|\mat A\|_F} < \xi \epsilon \ \bigcap \ \frac{\|\mat A-\mat{CUR}\|_F}{\|\mat A\|_F} > (1+\delta)\epsilon \right]\\
+        \notag \\
+        & \notag =\pr\left[\frac{\|\mat G(\mat A-\mat{CUR})\|_F\|\mat A-\mat{CUR}\|_F}{\|\mat A-\mat{CUR}\|_F\|\mat A\|_F} < \xi \epsilon \ \bigcap\  \frac{\|\mat A-\mat{CUR}\|_F}{\|\mat A\|_F} > (1+\delta)\epsilon \right]\\
+        \notag \\
+        & \notag  \leq \pr\left[\frac{\|\mat G(\mat A-\mat{CUR})\|_F}{\|\mat A-\mat{CUR}\|_F} < \xi/(1+\delta)\right],
+    \end{align}
+    where the final inequality comes from using the lower bound of $\|\mat A-\mat{CUR}\|_F / \|\mat A\|_F$. Now by letting $s = 1/\tau = \xi/(1+\delta)$ 
+    applying the second bound from \cref{thm:gratton-bounds} we have
+    \begin{equation}
+         \pr\left[\frac{\|\mat G(\mat A-\mat{CUR})\|_F}{\|\mat A-\mat{CUR}\|_F} < \xi/(1+\delta)\right] \leq \exp\left( -\frac{cs^4 (1- 1/s ^2)^2}{4}\right)
+    \end{equation}
+    Setting the right-hand side equal to $\alpha$ and solving the resulting equation for $s$ gives the desired result.
+\end{proof}
+ This bound tells us that to prevent a problematic failure, a failure where $ \|\mat{A} - \mat{CUR}\|_F / \|\mat A\|_F> (1+\delta) \epsilon$, we should stop IterativeCUR using the threshold $\epsilon(1+\delta)\sqrt{1-2\sqrt{-\ln(\alpha)/c}}$. For this bound to be well defined, we need $c>-4\log(\alpha)$. This means that for every desired $\alpha$ there is a minimal block size that can be chosen to ensure the desired stopping control. For example, we can ensure an incorrect stopping probability of $10^{-10}$ by setting $c = 100$ and dividing $\epsilon$ by 4.98. In practice, using this adjustment at $c = 100$ is unnecessary (see \cref{sec:exp}). Additionally, although this bound is derived without accounting for the dependence between the residuals, this dependence is small enough where it can still provide a good representation of the randomness associated with the residual approximation.
+    
+\subsection{Computational Complexity and Memory Requirements}
+We can now consider the computational complexity of IterativeCUR. In \cref{tab:comp-complex} we display a complete breakdown of the computational cost for the dense matrix case when LUPP is used for row and column selection. For these costs, $b$ is the block size and $c$ is the sketch size, which in our implementation is set to $c = 1.1b$. 
+
+The primary costs of IterativeCUR are: (1) computing the column residual (Line \ref{alg:left-res} of \icur), (2) computing the row residual (Line \ref{alg:right-res} of \icur), (3) updating the pseudoinverse (Line \ref{alg:update} of \icur), and (4) computing the initial sketch (Line \ref{alg:initial-sketch} of \icur). 
+
+The primary expense in the residual computation is the matrix-matrix multiplications, multiplying the $\mat G \mat C \mat U$ with $\mat R$ in the column residual case and multiplying $\mat C$ with $\mat U \mat R[:,J_k]$ in the row residual case. This cost can be substantially reduced when the $\mat C$ and $\mat R$ factors are sparse, which typically occurs when $\mat A$ is sparse. Furthermore, because matrix-matrix multiplication is a BLAS-3 operation, parallelization allows this operation to be executed in a substantially more scalable manner than the $\mathcal{O}((m + n)r^2)$ cost suggests.
+
+When the residual computation is not the dominant cost, computing the pseudoinverse for the core matrix becomes the dominant cost. If this pseudoinverse is recomputed at every iteration, this cost is $\mathcal{O}(r^4)$. However, we can reduce this cost by recognizing that each update to the CUR appends blocks of rows and columns to the intersection matrix, which allows us to use Givens rotations-based updating of the pseudoinverse described in \cite{stewart1998matrix}. Such pseudoinverse updates only require a complexity of $\mathcal{O}((bk)^2)$ at each iteration $k$. In practice, we rarely see benefits from this updating procedure over the recomputation of the pseudoinverse because of LAPACK's highly efficient parallelization of the QR factorization \cite{buttari2008parallel}. %and Givens rotations are mostly based on low-level BLAS operations.  
+The update to QR can still be beneficial when small block sizes are used or when the rank of the approximation is very high, e.g. $r > 10,000$ depending on the architecture of the system. When $\epsilon$ is not too small,
+%\tp{should we not say $r$ instead of $\epsilon$, as $r$ can be very large or small for same $\epsilon$ depending on the problem.} 
+one could also improve the practicality of the pseudoinverse phase by computing the LU decomposition rather than the QR. The LU is typically more parallelizable and equally as accurate provided that the matrix is not too poorly conditioned, as would be the case when $\epsilon$ is not too small and the matrix is not exactly low-rank.
+
+
+The $2bn(2m-1)$ cost of computing the sketch of the matrix $\mat A$ could be potentially problematic for very large $m$ and $n$. This problem can be reduced if we sketch using a sparse-sign sketch \cite{cohen2016nearly} or a Subsampled Randomized Trigonometric Transform sketch \cite{tropp2019streaming}. In our experiments, we used a Gaussian matrix because for small sketch sizes $b$, all sketching techniques have roughly the same complexity. 
+
+In terms of storage, in the dense case, we need $mr$
+storage for $\mat C_k$,  $r^2$ storage for $\mat U_k$, and $rn$ storage for $\mat R_k$. Additionally, we need $O(bn)$ space to store the sketch of $\mat A$ and the column residual. Finally, we need $O(bm)$ space to store the row residual. The small space required for the residuals allows for reduced data-movement costs, which lead to highly efficient pivoting on large matrices. When $\mat A$ is sparse, the storage for $\mat C_k,\mat R_k$ will be reduced accordingly. 
+
+
+	\begin{center}
+		\begin{table}
+            \label{tab:comp-complex}
+\caption{Computational Complexity of IterativeCUR (\icur)}                     
+		    \begin{tabular}{|c|c|}
+                \hline
+		        Action &  Total Cost\\
+		        \hline
+                Sketch & $1.1bn(2m-1)$\\
+		        %QRPP for columns& $6nrb - 3/2r - 8/3rb^2 - r^2/2b$\\
+		        %QRPP for Rows& $2rmb - 11/3 rb^2 - r^2 b$\\
+                LUPP for Cols & $rb (n - 1/2) + 7/6 r - rb^2 / 3$\\
+                LUPP for Rows & $rb (m - 1/2) + 7/6 r - rb^2 / 3$\\
+                Updated QR for U & $1/12 (r^3 (14 - 8/b) + r^2 (36b - 6/b) + r(43b^2 - 7b  -12))$\\
+		        Col Residual & $c/(6b) (r^3 + r^2(6n - b + 3) + r(b^2 - 3) + bn$ \\
+		        Row Residual & $1/6 (r^3 + r^2 (6m - b + 3) + r(b^2 - 3) + bm$ \\
+		       {Norm of Col Residual} & {$2bn - 1$}\\
+                \hline
+                
+	        \end{tabular}            
+	    \end{table}
+        
+	\end{center}
+

@@ -1,0 +1,111 @@
+\begin{tikzpicture}[scale = \boxplotscale]
+    \newcommand{\matname}{ct20stif}
+    \newcommand{\Matname}{Ct20Stif}
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_1_LUPP_iterative_cur.csv}\IluppO
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_10_LUPP_iterative_cur.csv}\IluppTe
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_20_LUPP_iterative_cur.csv}\IluppTw
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_40_LUPP_iterative_cur.csv}\IluppFe
+     \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_1_LUPP_sketch_cur.csv}\sluppO
+     
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_1_QRPP_iterative_cur.csv}\IqrcpO
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_10_QRPP_iterative_cur.csv}\IqrcpTe
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_20_QRPP_iterative_cur.csv}\IqrcpTw
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_40_QRPP_iterative_cur.csv}\IqrcpFe
+     \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_1_QRPP_sketch_cur.csv}\sqrcpO
+     
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_1_OSPP_iterative_cur.csv}\IosO
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_10_OSPP_iterative_cur.csv}\IosTe
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_20_OSPP_iterative_cur.csv}\IosTw
+    \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_40_OSPP_iterative_cur.csv}\IosFe
+     \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_1_OS_sketch_cur.csv}\sosO
+       \pgfplotstableread[col sep=comma]{./csvs/kahan/kahan_500_1_svds.csv}\svdsO
+    \begin{axis}[
+        name = axis1,
+        ylabel = {$\frac{\|A - \hat{A}_k\|_F}{\|A\|_F}$},
+        xlabel = {Rank of Approximation},
+        title = {Median Accuracy Block Size 1},
+        ymode = log,
+        ymajorgrids,
+        legend pos = south east,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[sqr_line]table[x = n_rows, y = var_acc]\sqrcpO;
+        \addplot[scur_line]table[x = n_rows, y = var_acc]\sluppO;
+        \addplot[sos_line]table[x = n_rows, y = var_acc]\sosO;
+        \addplot[icur_line]table[x = n_rows, y = var_acc]\IluppO;
+        \addplot[qr_line]table[x = n_rows, y = var_acc]\IqrcpO;
+        \addplot[os_line]table[x = n_rows, y = var_acc]\IosO;
+        
+        %\legend{\svds, \curs, \icurl};
+    \end{axis}
+    
+    \begin{axis}[
+        name = axis2,
+        at={(axis1.outer north east)},
+        anchor=outer north west,
+         ylabel = {$\frac{\|A - \hat{A}_k\|_F}{\|A\|_F}$},
+        xlabel = {Rank of Approximation},
+        title = {Median Accuracy Block Size 10},
+        ymode = log,
+        ymajorgrids,
+        legend pos = south east,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+      \addplot[sqr_line]table[x = n_rows, y = var_acc]\sqrcpO;
+        \addplot[scur_line]table[x = n_rows, y = var_acc]\sluppO;
+        \addplot[sos_line]table[x = n_rows, y = var_acc]\sosO;
+        \addplot[icur_line]table[x = n_rows, y = var_acc]\IluppTe;
+        \addplot[qr_line]table[x = n_rows, y = var_acc]\IqrcpTe;
+        \addplot[os_line]table[x = n_rows, y = var_acc]\IosTe;
+        %\legend{\svds, \curs, \icurl};
+    \end{axis}
+
+        \begin{axis}[
+        name = axis3,
+        at={(axis1.outer south west)},
+        anchor=outer north west,
+         ylabel = {$\frac{\|A - \hat{A}_k\|_F}{\|A\|_F}$},
+        xlabel = {Rank of Approximation},
+        title = {Median Accuracy Block Size 20},
+        ymode = log,
+        ymajorgrids,
+        legend pos = south east,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[sqr_line]table[x = n_rows, y = var_acc]\sqrcpO;
+        \addplot[scur_line]table[x = n_rows, y = var_acc]\sluppO;
+        \addplot[sos_line]table[x = n_rows, y = var_acc]\sosO;
+        \addplot[icur_line]table[x = n_rows, y = var_acc]\IluppTw;
+        \addplot[qr_line]table[x = n_rows, y = var_acc]\IqrcpTw;
+        \addplot[os_line]table[x = n_rows, y = var_acc]\IosTw;
+        %\legend{\svds, \curs, \icurl};
+    \end{axis}
+
+            \begin{axis}[
+        at={(axis3.outer north east)},
+        anchor=outer north west,
+         ylabel = {$\frac{\|A - \hat{A}_k\|_F}{\|A\|_F}$},
+        xlabel = {Rank of Approximation},
+        title = {Median Accuracy Block Size 40},
+        ymode = log,
+        ymajorgrids,
+        legend pos = south east,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[sqr_line]table[x = n_rows, y = var_acc]\sqrcpO;
+        \addplot[scur_line]table[x = n_rows, y = var_acc]\sluppO;
+        \addplot[sos_line]table[x = n_rows, y = var_acc]\sosO;
+        \addplot[icur_line]table[x = n_rows, y = var_acc]\IluppFe;
+        \addplot[qr_line]table[x = n_rows, y = var_acc]\IqrcpFe;
+        \addplot[os_line]table[x = n_rows, y = var_acc]\IosFe;
+        %\legend{\svds, \curs, \icurl};
+    \end{axis}
+\end{tikzpicture}

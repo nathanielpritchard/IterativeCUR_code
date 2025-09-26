@@ -1,0 +1,41 @@
+\begin{tikzpicture}[scale = \boxplotscale]
+    \pgfplotstableread[col sep=comma]{./csvs/yuji_example/t30_cur.txt}\cur
+    \pgfplotstableread[col sep=comma]{./csvs/yuji_example/t30_svd.txt}\svd
+    \begin{axis}[
+        name = axis1,
+        ylabel = {$\frac{\|A - \hat{A}_k\|_F}{\|A\|_f}$},
+        xlabel = {Rank of Approximation},
+        title = {Error for 30,000 \textsc{RandSVD}},
+        ymode = log,
+        xmode = log,
+        ymajorgrids,
+        legend pos = south west,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[icur_line]table[x = tols, y = time]\cur;
+        \addplot[svds_line]table[x = tols, y = time]\svd;
+        \legend{ICUR, SVDSketch};
+    \end{axis}
+    \begin{axis}[
+        name = axis1,
+        at={(axis1.outer north east)},
+        anchor=outer north west,
+        xshift = 1cm,
+        ylabel = {Time (Seconds)},
+        xlabel = {Rank of Approximation},
+        title = {Error for 30,000 \textsc{RandSVD}},
+        ymode = log,
+        xmode = log,
+        ymajorgrids,
+        legend pos = south east,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[icur_line]table[x = tols, y = accuracy]\cur;
+        \addplot[svds_line]table[x = tols, y = accuracy]\svd;
+        \legend{ICUR, SVDSketch};
+    \end{axis}
+\end{tikzpicture}

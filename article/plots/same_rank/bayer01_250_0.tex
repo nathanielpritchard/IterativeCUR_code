@@ -1,0 +1,44 @@
+\begin{tikzpicture}[scale = \boxplotscale]
+    \newcommand{\matname}{bayer01}
+    \newcommand{\Matname}{\textsc{Bayer01}}
+    \pgfplotstableread[col sep=comma]{./csvs/same_rank/\matname_250_accuracy.csv}\accdata
+    \pgfplotstableread[col sep=comma]{./csvs/same_rank/\matname_250_time.csv}\timedata
+    
+    \begin{axis}[
+        name = axis1,
+        ylabel = {Time (Seconds)},
+        xlabel = {Rank of Approximation},
+        title = {Time for \Matname},
+        ymode = log,
+        ymajorgrids,
+        legend pos = south east,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[svds_line]table[x = n_cols, y = svds]\timedata;
+        \addplot[scur_line]table[x = n_cols, y = LUPP_sketch_cur]\timedata;
+        \addplot[icur_line]table[x = n_cols, y = LUPP_iterative_cur]\timedata;
+        %\legend{\svds, \curs, \icurl};
+    \end{axis}
+    
+    \begin{axis}[
+        name = axis2,
+        at={(axis1.outer north east)},
+        anchor=outer north west,
+        ylabel = {Froebinius Norm},
+        xlabel = {Rank of Approximation},
+        title = {Accuracy for \Matname},
+        ymode = log,
+        ymajorgrids,
+        legend pos = north east,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[svds_line]table[x = n_cols, y = svds]\accdata;
+        \addplot[scur_line]table[x = n_cols, y = LUPP_sketch_cur]\accdata;
+        \addplot[icur_line]table[x = n_cols, y = LUPP_iterative_cur]\accdata;
+        \legend{\svds, \curs, \icurl};
+    \end{axis}
+\end{tikzpicture}

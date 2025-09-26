@@ -1,0 +1,2 @@
+mat_label,n_cols,matrix_size,block_size,oversample,metric
+bayer01,400,57735,200,0,-1.8588037949673197e-4

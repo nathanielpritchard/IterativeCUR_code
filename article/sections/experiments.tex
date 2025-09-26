@@ -1,0 +1,121 @@
+With an understanding of the details of IterativeCUR, we now examine its practical effectiveness through two broad types of experiments. Both experiments were performed on a 48 core, 2.6/4.0 GHz machine with 2 TB of memory. In the first type of experiment, we perform 10 runs of IterativeCUR\footnote{In the experiments we considered using the relative error with $\|\mat A\|_F$ in the denominator rather than $\|\mat G\mat A\|_F$. In general, using $\|\mat G \mat A\|_F$ is more than sufficient.} with a fixed stopping threshold and collect information about its accuracy, speed, and rank of approximation. In the second type of experiment, we perform five runs of IterativeCUR for each rank in a sequence of ranks and examine its median accuracy and median computation time. The first set of experiments gives us an indication of how IterativeCUR performs when a solution of a specified tolerance is desired. The second set of experiments indicates how effectively IterativeCUR collects indices.
+
+We compare the performance of IterativeCUR using LUPP column and row index selection with two methods, rank-adaptive Randomized SVD (SVDsketch), proposed in \cite{anderson2016efficient} \footnote{ Can be called using \texttt{svdsketch} in MATLAB}, and sketched LU with Partial Pivoting (s-LUPP), proposed in \cite{dong2023simpler}. By virtue of being an approximation of the SVD of $\mat A$, SVDSketch provides a good baseline for the best approximation performance at a particular rank that a rank-adaptive technique can achieve. S-LUPP, which is a very high-quality CUR method in terms of computational time and accuracy (but is not rank-adaptive), provides us with an effective baseline for how accurate an effectively chosen CUR can be on a particular problem.  This comparison is particularly important because as CUR is constrained to selecting subsets of rows and columns, the best possible error of a CUR approximation at a particular rank, $r$, can be up to a factor of $r+1$ worse than the truncated SVD \cite{osinsky2025close}. 
+
+For our experiments, we first consider how well IterativeCUR performs in its intended use, returning an approximation of a desired quality. Here we use the first experiment type to compare IterativeCUR, s-LUPP, and SVDSketch to each other in terms of accuracy, computational time, and rank when run to a specific tolerance. Then, with an understanding of how well IterativeCUR performs in its designed context, we next investigate how efficiently IterativeCUR selects columns by comparing the accuracy of each method's approximation at fixed ranks. We close this section with investigations into the effects that index selection method and block size have on approximation accuracy of IterativeCUR.
+
+\subsection{Threshold Examples} \label{subsec:threshold}
+We first examine the performance of IterativeCUR in the rank-adaptive regime. Here we consider approximating the two square matrices displayed in \cref{tab:rank-adapt}. The first matrix is the \textsc{Low-Rank} matrix, which is exactly low-rank and is formed by generating two standard Gaussian matrices, $\mat{G}_i \in \real^{30000 \times 2000}, i \in \{1,2\}$, and setting $\mat A = \mat{G}_1 \mat{G}_2^\top$. The second matrix is the \textsc{c-67} matrix from the SuiteSparse library \cite{davis2011university}. %Other tested examples can be found in \cref{sec:appendix}. 
+\begin{table}[h]
+    \centering
+    \caption{Matrix information for fixed rank experiment.} \label{tab:rank-adapt}
+    \begin{tabular}{c|c|c|c}
+    \toprule
+    Matrix & Dimension & Sparse & Tolerance \\
+   \hline
+    \textsc{Low-Rank} & 30,000 & False & $1\times 10^{-6}$ \\
+     \textsc{c-67} & 57,975 & True & $1\times10^{-2}$ \\
+    \end{tabular}
+  \end{table}
+
+In the experiment, we run each method (IterativeCUR, s-LUPP, SVDSketch), 10 times. SVDSketch and IterativeCUR were run with a block size of 250 and stopped when the relative error reached the threshold specified in \cref{tab:rank-adapt}. The results of these experiments are displayed in \cref{fig:c-67,fig:low_rank_comp} as box-and-whisker plots where the middle line represents the median, the outer lines on the box represent the 25th and 75th quartiles, and the outer endpoints represent the minimum and maximum. 
+
+\begin{figure}[h]
+    \centering
+    \input{./plots/synthetic_comparisons/low_rank_30000_250_0.tex}
+    \caption{Box plots for the performance of SVDsketch (SVDs), s-LUPP, and Iterative LUPP applied to a \textsc{low-rank} matrix in \cref{tab:rank-adapt}. The left plot displays the accuracy of the approximation, the middle plot displays the rank of the approximation, and the right plot displays the computational time.}
+    \label{fig:low_rank_comp}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \input{./plots/synthetic_comparisons/c-67_57975_250_0.tex}
+    \caption{Box plots for the performance of SVDsketch (SVDs), s-LUPP, and Iterative LUPP applied to a \textsc{c-67} matrix in \cref{tab:rank-adapt}. The left plot displays the accuracy of the approximation, the middle plat displays the rank of the approximation, and the right plot displays the computational time.}
+    \label{fig:c-67}
+\end{figure}
+In the experiments for the \textsc{Low-Rank} matrix we can observe that all three methods return an approximation with the original matrix's rank, 2000, and are far more accurate than the desired threshold, $1\times 10^{-6}$, with the median accuracy for SVDSketch being an order of magnitude more accurate at $4 \times 10^{-15}$ than the CUR approaches (both $9 \times 10^{-14}$). The major difference between the methods is observed in the timings where IterativeCUR is the fastest method with a median time of 12 seconds, slightly faster than s-LUPP's median time of 15 seconds, and about 7 times faster than SVDSketch's median time of 85 seconds. Overall, from this experiment, we can see in the easy-to-handle exactly low-rank case, IterativeCUR performs effectively. 
+
+When we make the experiment more difficult by considering a large sparse matrix \textsc{c-67} matrix, we still see that IterativeCUR performs well. Here, the stopping threshold is $1\times 10^{-2}$, and we observe that IterativeCUR finds solutions that are slightly more accurate than SVDSketch and similarly as accurate as s-LUPP with the added advantage of being less variable than s-LUPP. Further, IterativeCUR uses only a median time of 2.6 seconds to find this solution as opposed to the median time of 3.9 seconds for s-LUPP, and the median time of 41 seconds for SVDSketch. Overall, we can see that IterativeCUR can perform highly effectively in the rank-adaptive context.
+
+\subsection{Efficiency of Selection}\label{subsec:fixed_rank}
+While it is clear that IterativeCUR can effectively form approximations of a single specified quality, it is unclear whether IterativeCUR can efficiently form such approximations for an arbitrary rank. To examine the efficiency of the approximation, we compare the speed and accuracy of IterativeCUR's approximation with the s-LUPP and SVDSketch approximations of fixed ranks $\{500,1000,1500,2000,2500, 3000, 3500, 4000\}$ for the matrices listed in \cref{tab:fixed-rank}. The \textsc{Low-Rank PD} matrix is generated the same way as the \textsc{low-rank} matrix in \cref{subsec:threshold} with the addition of a diagonal matrix containing on its diagonal the vector $(1-\exp({\log(30,000)}/{\log(5)})^{1:30000}$. The \textsc{G7Jac200} and \textsc{Bayer01} matrices come from SuiteSparse \cite{davis2011university}.  We run each method, matrix, and rank combination five times and display the median runtime and accuracy in \cref{fig:fixed_rank_low_rank_pd},  \cref{fig:fixed_rank_g7jac}, and \cref{fig:fixed_rank_bayer01}. For each run, IterativeCUR and SVDSketch are run with a block size of 250.
+\begin{table}[h]
+    \centering
+    \caption{Matrix information for fixed-rank experiment.} \label{tab:fixed-rank}
+    \begin{tabular}{c|c|c}
+    \toprule
+    Matrix & Dimension & Sparse \\
+   \hline
+    \textsc{Low-Rank PD} & 30,000 & False\\
+     \textsc{G7Jac200} & 57,310 & True\\
+     \textsc{Bayer01} & 57,735 &True\\
+    \end{tabular}
+  \end{table}
+
+From these results, we can see that the median relative errors of the approximations formed by IterativeCUR are as small, if not smaller, than the median s-LUPP relative error at every rank. Additionally, the IterativeCUR relative error typically is only at most twice the relative error of SVDSketch.  
+
+In terms of runtime, IterativeCUR is much faster than SVDSketch. In the best case, IterativeCUR is 36 times faster than SVDSketch when estimating a rank-4000 approximation for the \textsc{G7Jac200} matrix, and in the worst case, IterativeCUR is still six times faster than SVDSketch for the rank 500 approximations to the \textsc{G7Jac200} and \textsc{Low-Rank PD} matrices.  This time difference is much smaller for s-LUPP with IterativeCUR being only four times faster in the best case, rank 4000 approximation to \textsc{Low-Rank PD}, and providing no speed-up in the worst cases, the rank 500 approximations for the \textsc{G7Jac200} and \textsc{Bayer01} matrices.  Compared to both alternatives, it is also important to note that the benefits are greatest for the densest matrix, \textsc{Low-Rank PD}, where the memory load is the highest. This seems to suggest that on much larger matrices with larger memory loads, the benefits afforded by a single small sketch for IterativeCUR should lead to even greater performance improvements over these alternatives.  
+
+\begin{figure}[h]
+    \centering
+    \input{./plots/same_rank/low_rank_pd_250_0.tex}
+    \caption{This plot shows the change in median relative error and median runtime time for \svds, \icurl, and \curs with approximations of varying rank for a \textsc{Low-Rank PD} matrix.}
+    \label{fig:fixed_rank_low_rank_pd}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \input{./plots/same_rank/g7jac200_250_0.tex}
+    \caption{This plot shows the change in median relative error and median runtime time for \svds, \icurl, and \curs{} with approximations of varying rank for a \textsc{G7Jac200} matrix.}
+    \label{fig:fixed_rank_g7jac}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \input{./plots/same_rank/bayer01_250_0.tex}
+    \caption{This plot shows the change in median relative error and median runtime time for \svds, \icurl, and \curs{} with approximations of varying rank for a \textsc{Bayer01} matrix.}
+    \label{fig:fixed_rank_bayer01}
+\end{figure}
+
+
+
+\subsection{Selection Methods}
+Its clear that IterativeCUR with LUPP index selection is highly effective, it is next useful to consider whether using different index selection methods will have an impact on the performance. For this experiment, we consider the approximation quality of IterativeCUR when indices are selected with QRCP \cite{martinsson2017householder}, LUPP \cite{dong2023simpler}, and Osinsky\footnote{The Osinsky implementation selects columns with Osinsky and rows with QRCP.} \cite{osinsky2025close} for a \textsc{Lehmer} matrix with $1,000$ rows and columns from MATLAB's gallery and a  \textsc{Low-Rank PD}\footnote{For the diagonal matrix we take only the first 100 entries from the vector defined in \cref{subsec:fixed_rank}. Additionally, instead of rank $2,000$ we use a rank of $100$ for the two Gaussian matrices.} matrix with $1,000$ rows and columns. We consider each method's approximation performance with block size $50$ at ranks $\{150, 350, 550, 750,950\}$. For a baseline, we also consider the approximation performance of a truncated SVD and SVDSketch approximations. As we did not have an optimized implementation of Osinsky's selection approach, we did not consider the runtime, although it should be noted that Osinsky's is substantially slower than the alternatives.
+
+We display the results of the experiment in \cref{fig:rand_svd_method_comp}. In both experiments, the LUPP and QRCP versions of IterativeCUR perform the same. The Osinsky method outperforms the other two selection approaches for the \textsc{Low-Rank PD} matrix, but is outperformed by the LUPP and QRCP approaches in the \textsc{Lehmer} matrix. Although initially it may be surprising that the best index selection approach does not always result in the best IterativeCUR approximation, one can make sense of this behavior by thinking about the conscientiously greedy interpretation of IterativeCUR discussed in \cref{sec:the}. Under this interpretation, at each iteration sketching the residual reveals the approximate dominant $b$-dimensional subspace of the residual. If this subspace contains enough information to make effective global index selections, then choosing the best possible indices will work exceptionally well. However, if the subspace does not contain enough information to make the great global selections, then choosing the best indices for this $b$-dimensional subspace could mean poor global index selection because the index selection is more aggressive than the information quality warrants. This seems to be what occurs in these experiments, although it is very computationally expensive to truly verify whether the $b$-dimensional space contains enough information for effective global index selection in the \textsc{Low-Rank PD} case but not in the \textsc{Lehmer} case. Although, we can hypothesize this to be the case owing to \textsc{Lehmer} having a slower spectral decay than \textsc{Low-Rank PD}. What is remarkable is that even with this potentially greedy behavior in the \textsc{Lehmer} case, the worst-case approximation of the three methods is not substantially worse than the other two. This lends credence to the conscientiously greedy interpretation of IterativeCUR where making selections using the residual limits the down-side risk that one would observe from a wholly greedy approach. 
+
+
+Overall, when one considers that in general LUPP is about twice as fast as QRCP and about three times as fast as Osinsky, it seems clear that the best selection approach to choose in most scenarios is LUPP. If one desires greater accuracy, Osinsky may result in better approximations and may be worth trying; however, as a default, we suggest the use of sketched LUPP in IterativeCUR.
+
+
+
+\begin{figure}[h]
+    \centering
+    %\input{./plots/selection_methods/randsvd_6000_250.tex}
+    \input{plots/selection_methods/lehmer_1000}
+    \input{plots/selection_methods/low_rank_pd_1000}
+    \caption{The performance of IterativeCUR using \cite{osinsky2025close} (Osinsky), QR with column pivoting (QRCP), and LU with partial pivoting (LUPP) as the column and row selection strategies. }
+    \label{fig:rand_svd_method_comp}
+\end{figure}
+
+
+\subsection{Block Size}
+In addition to index selection strategies, another important aspect of IterativeCUR is the effect that block size has on runtime and accuracy. For this experiment, we compare IterativeCUR with LUPP index selection at block sizes 5, 50, 100, and 500 on the \textsc{Bayer01} and \textsc{Low-Rank PD} matrices from \cref{tab:fixed-rank} at ranks $\{500,1000,1500,2000,2500\}$.
+
+
+\begin{figure}[h]
+    \centering
+    \input{./plots/block_size/bayer01.tex}
+    \caption{Comparison of time and accuracy of IterativeCUR for block sizes 5, 50, 100, and 500 for a \textsc{Bayer01} matrix. The left plot shows median runtime over five runs while the left plot shows median relative error over five runs.}
+    \label{fig:bayer01_bs}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \input{./plots/block_size/low_rank_pd.tex}
+    \caption{Comparison of time and accuracy of IterativeCUR for block sizes 5, 50, 100, and 500 for a \textsc{Low-Rank PD} matrix. The left plot shows median runtime over five runs while the left plot shows median relative error over five runs.}
+    \label{fig:low_rank_pd_bs}
+\end{figure}
+
+The results of these experiments are shown in \cref{fig:bayer01_bs} and \cref{fig:low_rank_pd_bs}. By first looking at the runtime we can see that for the sparse \textsc{Bayer01} matrix the choice of block size does not seem to have a substantial impact on runtime. When we consider the dense \textsc{Low-Rank PD} matrix, decreasing block size leads to slower performance. This makes sense because provided the matrix is not too big, large block sizes allow LAPACK to better exploit efficient blocked operations. 
+
+In terms of accuracy, we see that, in the \textsc{Bayer01} matrix case, larger block sizes offer very small improvements in accuracy. Alternatively, for the \textsc{Low-Rank PD} matrix a smaller block size seems to lead to more accurate solutions, with a block size of 5 having about a 10 times lower median relative error than a block size of 500 and half the error as the block size of 50. These results align with the conscientiously greedy interpretation of IterativeCUR where smaller block sizes would be expected to produce approximations that are more accurate than the approximations produced by larger block sizes. 
+
+Overall, this experiment suggests that the block size should be chosen based on the user's balancing of potential computational accelerations from blocking operations and the user's intuition on the rank of the matrix. When the user suspects that the matrix has a rank less than 100, then potentially choosing a block size as small as 5 may be sufficient. However, when the user expects the rank to be in the 1000s, moderate block sizes, around 200, should be chosen to best capitalize on the benefits of blocked LAPACK operations. 

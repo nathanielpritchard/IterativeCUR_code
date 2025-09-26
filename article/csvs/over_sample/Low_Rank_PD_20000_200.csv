@@ -1,0 +1,4 @@
+mat_label,matrix_size,block_size,oversample,threshold,time_LUPP_iterative_cur,time_svds,n_cols_LUPP_iterative_cur,n_cols_svds,n_rows_LUPP_iterative_cur,n_rows_svds,overall_accuracy_LUPP_iterative_cur,overall_accuracy_svds
+Low_Rank_PD,20000,200,0,0.001,23.049443,272.7735045,1200,800,1200,800,2.5078445274906e-4,1.91342391867266e-5
+Low_Rank_PD,20000,200,0.1,0.001,39.427712,206.6528725,900,800,990,800,2.3083237111399998e-4,1.91342391867266e-5
+Low_Rank_PD,20000,200,0.2,0.001,24.596667,299.91913750000003,800,800,960,800,2.8122821726414e-4,1.91342391867266e-5

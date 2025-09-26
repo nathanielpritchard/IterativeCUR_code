@@ -1,0 +1,25 @@
+\begin{tikzpicture}[scale = \boxplotscale]
+    \newcommand{\matname}{lehmer}
+    \newcommand{\Matname}{Lehmer }
+    \pgfplotstableread[col sep=comma]{./csvs/selection_methods/\matname_1000_50_med.csv}\accdata
+    
+    \begin{axis}[
+        name = axis1,
+        ylabel = {$\frac{\|A - \hat{A}_k\|_F}{\|A\|_F}$},
+        xlabel = {Rank of Approximation},
+        title = {Index Selection for \textsc{\Matname}},
+        ymode = log,
+        ymajorgrids,
+        legend pos = south west,
+        scale only axis,
+        xlabel near ticks,
+        ylabel near ticks,
+        ]
+        \addplot[svd_line]table[x = rank, y = svd]\accdata;
+        \addplot[svds_line]table[x = rank, y = svds]\accdata;
+        \addplot[qr_line]table[x = rank, y = qr]\accdata;
+        \addplot[icur_line]table[x = rank, y = lupp]\accdata;
+        \addplot[os_line]table[x = rank, y = os]\accdata;
+        \legend{SVD, \svds, QRCP, LUPP, Osinsky};
+    \end{axis}
+\end{tikzpicture}

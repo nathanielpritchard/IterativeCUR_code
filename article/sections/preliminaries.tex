@@ -1,0 +1,33 @@
+The following section will present the background necessary to describe our proposed method for forming CUR approximations. We will begin by developing an understanding of the power of random vectors for revealing dominant singular subspaces through a discussion of the random subspace embeddings and the Randomized Rangefinder. With an understanding of the power of random sketching, we introduce important ideas relating to CUR approximations.
+
+\subsection{Subspace Embeddings and the Randomized Rangefinder}
+A powerful tool in the field of Randomized Numerical Linear Algebra is the random subspace embedding. We define a random subspace embedding as 
+\begin{definition}\label{def:subspace}
+    For a given matrix $\mat A \in \real^{m \times n}$, distortion parameter $\delta \in (0,1)$, and probability $\gamma \in (0,1)$, a random linear map $\mat G: \real^{m} \rightarrow \real^b$ is considered a {random subspace embedding with distortion $\delta$} if for any $x$
+    \begin{equation}
+        \pr \left((1-\delta) \|\mat Ax\|_2 \leq \|\mat G\mat Ax\|_2 \leq (1+\delta)\|\mat Ax\|_2\right) \geq 1- \gamma. 
+    \end{equation}
+\end{definition}
+Random linear maps that satisfy \cref{def:subspace} for large enough $b$ include Gaussian matrices \cite{indyk1998approximate}, sub-sampled random trigonometric transforms \cite{ailon2009fast,tropp2011improved,woolfe2008fast}, and the sparse sign matrix \cite{cohen2016nearly, meng2013lowdistortion}. Because subspace embeddings approximately preserve the norms of matrices, they allow
+linear algebra operations to perform on a substantially lower-dimensional space. The reductions in computations afforded by operating on this lower-dimensional space have been central to the performance improvements offered by Randomized Numerical Linear Algebra approaches.
+
+The Randomized Rangefinder \cite{halko2011finding} is one technique that uses random linear maps with the subspace embedding property (\cref{def:subspace}) to form accurate low-rank approximations to the range of a matrix $\mat A$. Remarkably, the Randomized Rangefinder can accurately form these low-rank approximations even if the embedding dimension, $b$, is not large enough for the chosen random linear map to satisfy \cref{def:subspace}.  Specifically, noting that \cite{eckart1936approximation} shows that the optimal range approximator to a matrix $\mat A$ is given by the $r$ right singular vectors, $\mat V_r$, of a matrix, $\mat A$, corresponding to the largest singular values of $\mat A$ and has an error $\|\mat A - \mat A\mat V_r \mat V_r^\top\|_F^2 = \sum_{i=r+1}^{\min(m,n)}\sigma_i(\mat A)^2$, \cite{halko2011finding} shows that if $\mat X = \mat G \mat A$ with $\mat{G} \in \real^{b \times m}$ 
+then 
+    \begin{equation}\label{thm:rangefinder}
+     \ex \left[ \|\mat A - \mat A \mat{X}^\dagger \mat{X}\|_F^2 \right] \leq \left(1+\frac{r}{b-r-1}\right) \|\mat A - \mat A\mat V_r \mat V_r^\top\|_F^2.
+    \end{equation} 
+
+This result demonstrates that for $b$ slightly larger than $r$, multiplying $b$-Gaussian vectors with a matrix $\mat A$ is remarkably effective at approximating the dominant $r$-dimensional space. As noted in the original work, the quality of this approximation depends on the decay of the singular values \cite{halko2011finding}. In particular, when the singular values decay slowly, the bound is tight. Conversely, when the singular values decay quickly, the approximation can be significantly more accurate than \cref{thm:rangefinder} would indicate. 
+
+\subsection{The CUR Decomposition}
+
+The CUR decomposition is a low-rank approximation technique that approximates the matrix $\mat{ A} \in \real^{m \times n}$ by selecting subsets of the rows and columns of $\mat A $. In notation, we represent the CUR decomposition as selecting row indices $I$ and column indices $J$ and then forming the decomposition  
+\begin{equation}
+    \mat A \approx  \mat C \mat U \mat R,
+\end{equation}
+where $\mat C = \mat A(:, J)$, $\mat R = \mat A(I,:)$, and $\mat{U}$ is a small weight matrix. The theoretically optimal choice for the weight matrix is $\mat U = \mat C^\dagger \mat A \mat R^\dagger$, but this can be expensive to form. A more economical choice that often provides comparable accuracy is the  ``cross approximation'', $\mat U = \mat A(I, J)^\dagger$. We note that when the cross-approximation is used, it is often helpful to select indices dependently for purposes of numerical stability. That is, first select rows (or columns), and then select columns (or rows) based on the information in the chosen rows (columns). See \cite{park2025accuracy} for a full discussion. 
+
+Aside from the index selection approaches discussed in \cref{sec:int}, another important consideration for CUR methods is rank-adaptivity. Unlike standard techniques that require a priori knowledge of the rank, rank-adaptive techniques iteratively increase the rank of an approximation until the approximation satisfies a specified error tolerance, $\epsilon$. For rank-adaptive techniques to be effective, the error of the approximation must be at least cheap to estimate. For example, in the case of RandomizedSVD an effective rank-adaptive approach relies on the observation that the squared Frobenius norm of the error is the difference between the squared Frobenius norm of the original matrix and the squared Frobenius norm of its approximation \cite{yu2018efficient}. In the case of CUR, no such equivalence exists, and thus rank-adaptivity is typically a harder goal to achieve. 
+
+Progress has been made in developing rank-adaptive approaches for interpolative decompositions, which can be thought of as one-sided CUR decompositions where only row or column indices are selected. Rank-adaptive interpolative approaches include the sketched LU approach of Pearce et al. \cite{pearce2025adaptive} that relies on the sketched residual to attain rank-adaptivity in a similar manner to IterativeCUR and a closely related hybrid sampling approach known as Robust Blockwise Randomized Pivoting of Dong et al. \cite{dong2024robust}. Unfortunately, neither approach easily generalizes to CUR because of CUR's need for selecting both rows and columns dependently at each iteration. %This means that for efficient CUR selection techniques, one must still have a priori knowledge of the rank. 
+

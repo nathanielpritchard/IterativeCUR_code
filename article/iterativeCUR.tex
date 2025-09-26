@@ -1,0 +1,211 @@
+% SIAM Article Template
+% \documentclass[review,onefignum,onetabnum]{siamart171218}
+\documentclass[review,onefignum,onetabnum]{siamart220329}
+
+% Information that is shared between the article and the supplement
+% (title and author information, macros, packages, etc.) goes into
+% ex_shared.tex. If there is no supplement, this file can be included
+% directly.
+
+\input{iterativeCUR_shared}
+\tikzexternalize[shell escape=-enable-write18, prefix=cache/, figure name=output]
+
+% Optional PDF information
+\ifpdf
+\hypersetup{
+  pdftitle={IterativeCUR},
+  pdfauthor={Pritchard, Park, Nakatsukasa, Martinsson}
+}
+\fi
+
+% The next statement enables references to information in the
+% supplement. See the xr-hyperref package for details.
+
+%% Use \myexternaldocument on Overleaf
+\myexternaldocument{IterativeCUR_supplement}
+
+% FundRef data to be entered by SIAM
+%<funding-group>
+%<award-group>
+%<funding-source>
+%<named-content content-type="funder-name"> 
+%</named-content> 
+%<named-content content-type="funder-identifier"> 
+%</named-content>
+%</funding-source>
+%<award-id> </award-id>
+%</award-group>
+%</funding-group>
+
+
+\usepackage{color}
+
+\newcommand{\rr}[1]{\textcolor{red}{#1}}
+\newcommand{\rrr}[2]{\textcolor{blue}{(#1)}\textnormal{$\leftarrow$}\textcolor{red}{#2}}
+%\newcommand{\rrrr}[1]{\textcolor{blue}{(#1) $\leftarrow$ (remove)}}
+\usepackage[normalem]{ulem}\newcommand{\rrrr}[1]{\textcolor{blue}{\sout{(#1)}}}
+% \newcommand{\rrrr}[1]{\textcolor{blue}{(#1)}\textnormal{$\leftarrow$}\textcolor{blue}{{\rm remove}}}
+\newcommand{\bb}[1]{\textcolor{blue}{#1}}
+\newcommand{\bbb}[2]{\textcolor{blue}{(#1) $\leftarrow$ #2}}
+\newcommand{\bbbb}[1]{\textcolor{blue}{(#1) $\leftarrow$ (remove)}}
+\newcommand{\ignore}[1]{}
+
+
+\begin{document}
+
+\maketitle
+
+% REQUIRED
+\begin{abstract}
+  \input{sections/abstract}
+\end{abstract}
+
+% REQUIRED
+\begin{keywords}
+  CUR, index selection, low-rank approximation, rank-adaptive
+\end{keywords}
+
+% REQUIRED
+\begin{AMS}
+  	65F55 , 15A23, 68W20
+\end{AMS}
+% I was unable to write as much as I had hoped, I do think the story of the paper is fairly clear. below will present an outline of the paper, which we can discuss.
+
+% \textbf{Introduction:}
+% \begin{enumerate}
+%     \item Discuss the importance of low rank approximations in scientific computing and data science
+%     \begin{itemize}
+%         \item Mass spectronomy \cite{yang2015identifying}
+%         \item Gene identification \cite{mahoney2009cur}
+%         \item Reduced order modeling \cite{kramer2024learning, zheng2025semilagrangian}
+%         \item Neural Net Pruning \cite{flynn2024stat,park2025curing,mai2020vgg}
+%         \item Traffic Modeling \cite{mitrovic2013cur}
+%     \end{itemize}
+%     \item Discuss the how the SVD approaches are the most accurate, but can also be impractically expensive.
+%     \item Present that aside from the CUR other important approximations include the Interpolative decompositions and the CUR. Discuss how the CUR is often better able to preserve the structure of the matrix (things like sparsity and non-negativity), also can mention how it can also be viewed as more interpretable low-rank approximation.
+%     \item Discuss the logistics of forming a CUR
+%     \begin{itemize}
+%         \item Randomization has played a large role in improving the practicality of these techniques \cite{mahoney2009cur, dong2023simpler, chen2020efficient}
+%         \item Sampling versus pivoting techniques (Sampling techniques better theory, but often better in practice \cite{dong2023simpler})
+%         \item Typical requirement of apriori knowledge of the rank of the matrix (can estimate this with rank estimation, but this can be inaccurate for the CUR)
+%         \item Rank adaptiveness is a more useful way of forming the approximation
+%     \end{itemize}
+%     \item Discuss how we will propose IterativeCUR as a rank adaptive iterative framework that for all sketched-based column selection approaches (LUPP, QRCP, Osinsky, sampling based pivoting)
+%     \begin{itemize}
+%         \item In practice requires a single order 1 sketch of a matrix
+%         \item Empirically matches or exceeds the performance of other pivoted on the sketch approaches
+%         \item Has a computational cost of $\mathcal{O}((m+n)k^2)$
+%     \end{itemize}
+%     \item Lay out the organization of the paper.
+% \end{enumerate}
+% \textbf{Background:}
+% \begin{enumerate}
+%     \item Present the random subspace embeddings and the randomized rangefinder \cite{halko2011finding}
+%     \begin{itemize}
+%         \item Here the goal is to help the reader gain an understanding of how a small number of matrix vector products can form an effective basis for the dominant singular directions of a matrix
+%         \item Should also present the randomized SVD and SVDsketch as a rank adaptive technique for computing the randomized rangefinder \cite{yu2018efficient}
+%     \end{itemize}
+%     \item Introduce the reader to the CUR decomposition
+%     \begin{itemize}
+%         \item Present the definition of the CUR decomposition
+%         \item Discuss interpolative versus cross approximation
+%         \begin{itemize}
+%             \item Interpolative more passes through the matrix, in exchange for better accuracy
+%             \item Cross approximation can be improved via oversampling
+%         \end{itemize}
+%         , mention how interpolative requires more passes through the full matrix, but offers better approximation properties.
+%         \item Introduce the ideal of index selection
+%         \begin{itemize}
+%             \item Differentiate between sampling and pivoting
+%             \item Present examples of sampling strategies (squared norm \cite{frieze2004fast}, leverage scores \cite{mahoney2009cur}, DPP\cite{derezinski2021determinantal}) and that they often have nice theory, but for all practical purposes require a lot of indices to be selected to satisfy that theory \cite{chen2020efficient}
+%             \item Present the idea of pivoting for column selection and all of the possible strategies
+%             \begin{itemize}
+%                 \item Direct pivoting: CPQR \cite{stewart1998matrix}
+%                 \item Pivoting on a sketch: LUPP, CPQR \cite{dong2023simpler}
+%                 \item Random Pivots: \cite{dong2024robust}
+%                 \item Pivoting on a subspace: Osinsky \cite{osinsky2023close}, Continovis/kressner \cite{cortinovis2024adaptive}, DEIM \cite{sorensen2016deim}
+%                 \item Pivot refinement (Once a set of pivots have been obtained you pivot rows and columns out of the residual until quality metrics are obtained) \cite{chen2020efficient}
+%             \end{itemize}
+%             \item Discuss Rank-Adaptive (Stop when $\epsilon$-quality is achieved compared to fixed rank (stop at a fixed rank)
+%         \end{itemize}
+%     \end{itemize}
+% \end{enumerate}
+% \textbf{Algorithm:}
+% \begin{enumerate}
+%     \item Explain the intuition for the IterativeCUR
+%     \begin{itemize}
+%         \item Present the structure of the residual of cross approximation CUR decomposition
+%         \item Introduce the recursion lemma about the CUR residual
+%         \item Point out the parallels of the recursion lemma with the a pivoted LU decomposition
+%         \item Discuss how we would ideally alternate between pivoting and error checking until a sufficiently good approximation is formed.
+%         \item Bring up that if after every iteration we were to sketch the residual of the approximation and pivot on the residual we are essentially performing successive iterations of pivoting on the sketch
+%         \item Mention how in reality reusing the sketch introduces minor dependencies that do not end up being too substantial
+%     \end{itemize}
+%     \item Present the actual algorithm and note special aspects
+%     \begin{itemize}
+%         \item We can use any pivot selection strategy
+%         \item We only require $b$- matrix vector products and access to the selected rows and columns
+%         \item Mention how the choice of $b$ impacts the computational time because of the interplay between dimension and the LAPACK routines/parallelization used, but does not seem to have any impact on accuracy
+%         \item Discuss how because we are using a randomized progress estimator, we can make a small adjustment to ensure accuracy, but in practice the estimate is very accurate and no adjustment is really necessary
+%     \end{itemize}
+%     \item Discuss the computational complexity of the algorithm
+% \end{enumerate}
+% \textbf{Theory:}
+% \begin{enumerate}
+%     \item Present the very loose bound that we have
+%     \item Discuss the accuracy of the progress estimator (law of large numbers argument)
+%     \item Present some justification for the sketch reuse
+% \end{enumerate}
+% \textbf{Experiments:}
+% \begin{enumerate}
+%     \item Fixed rank comparisons
+%     \item Running the algorithm with stopping comparison
+%     \item Column selection methods
+%     \item block size comparison
+% \end{enumerate}
+\section{Introduction}\label{sec:int}
+\input{sections/introduction.tex}
+\input{sections/notation.tex}
+
+
+\section{Preliminaries}\label{sec:pre}
+%\bb{YN: I would put 'Notation' paragraph at the end of Sec 1. The current Sec 2.1 is odd as it talks about how IterativeCUR works in addition to notation. More genreally, please reexamine (sub)section titles. }
+
+\input{sections/preliminaries.tex}
+
+\section{IterativeCUR}\label{sec:alg}
+\input{sections/algorithm.tex}
+
+\section{Understanding the Performance of IterativeCUR}\label{sec:the}
+\input{sections/theory.tex}
+
+\section{Numerical Experiments}\label{sec:exp}
+\input{sections/experiments.tex}
+
+\section{Conclusion}\label{sec:con}
+\input{sections/conclusion.tex}
+
+%\input{sections/theory_ideas}
+
+%\appendix
+%\section{An example appendix}\label{sec:appendix}
+
+% \begin{figure}
+%     \centering
+%     \input{./plots/kahan/kahan_median_acc.tex}
+%     \caption{Comparison of time and accuracy of IterativeCUR for block sizes 5, 50, 100, and 500 for a Low Rank PD matrix generated according to \cref{tab:test-matrices}.}
+%     \label{fig:kahan-acc}
+% \end{figure}
+% \begin{figure}
+%     \centering
+%     \input{./plots/kahan/kahan_var_acc.tex}
+%     \caption{Comparison of time and accuracy of IterativeCUR for block sizes 5, 50, 100, and 500 for a Low Rank PD matrix generated according to \cref{tab:test-matrices}.}
+%     \label{fig:kahan-var-acc}
+% \end{figure}
+
+%\section*{Acknowledgments}\rrrr{We would like to acknowledge the assistance of volunteers in putting together this example manuscript and supplement.}\bb{YN: if we have nobody to thank, we can remove this bit.}
+
+\bibliographystyle{siamplain}
+\bibliography{bib/references}
+\end{document}
+
