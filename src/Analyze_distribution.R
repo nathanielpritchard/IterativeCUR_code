@@ -1,4 +1,3 @@
-setwd("~/Documents/Research/YujiRandNLA/fast_cur/IterativeCUR_modular")
 library(tidyverse)
 library(purrr)
 library(cowplot)
@@ -13,24 +12,30 @@ read_file <- function(filename) {
     str_split("_", simplify = T) %>%
     as.numeric()
   if(length(alg_stats) == 3){
-  return(
-        read_csv(filename) %>%
-          mutate(
-            matrix_size = rep(alg_stats[1], nrow(.)),
-            block_size = rep(alg_stats[2], nrow(.)),
-            oversample = rep(alg_stats[3], nrow(.)),
-            it_limit = rep(F, nrow(.))
-                 ) 
-      )
+    dat <-  read_csv(filename) %>%
+      mutate(
+        matrix_size = rep(alg_stats[1], nrow(.)),
+        block_size = rep(alg_stats[2], nrow(.)),
+        oversample = rep(alg_stats[3], nrow(.)),
+        it_limit = rep(F, nrow(.)))
+    
+    if(is.character(dat$overall_accuracy)){
+      dat<-dat %>% mutate(overall_accuracy = as.numeric(overall_accuracy),
+                          overall_accuracy = if_else(right_accuracy > left_accuracy, right_accuracy, left_accuracy))
+    }
+    return(dat )
   }else{
-        read_csv(filename) %>%
-          mutate(
-            matrix_size = rep(alg_stats[1], nrow(.)),
-            block_size = rep(alg_stats[2], nrow(.)),
-            oversample = rep(alg_stats[3], nrow(.)),
-            it_limit = rep(if_else(alg_stats[4] == 0, F, T), nrow(.))
-                 ) 
-      
+    dat <- read_csv(filename) %>%
+      mutate(
+        matrix_size = rep(alg_stats[1], nrow(.)),
+        block_size = rep(alg_stats[2], nrow(.)),
+        oversample = rep(alg_stats[3], nrow(.)),
+        it_limit = rep(if_else(alg_stats[4] == 0, F, T), nrow(.)))
+    if(is.character(dat$overall_accuracy)){
+      dat <- dat %>% mutate(overall_accuracy = as.numeric(overall_accuracy),
+                            overall_accuracy = if_else(right_accuracy > left_accuracy, right_accuracy, left_accuracy))
+    }
+    return(dat)
   }
 }
 
@@ -69,8 +74,8 @@ plot_performance <- function(results, mat_type, block_siz, oversampl, methods, s
     ) %>%
     mutate(
       Method = str_replace_all(method, "_([a-z])", toupper) %>%
-             str_replace_all("_", " ")
-      ) %>%
+        str_replace_all("_", " ")
+    ) %>%
     mutate(
       Method = if_else(Method == "svds", "SVDsketch", Method),
       Method = str_replace(Method, "QRPP", "QRCP"),
@@ -78,7 +83,7 @@ plot_performance <- function(results, mat_type, block_siz, oversampl, methods, s
     ) %>%
     left_join(tibble(method = methods) %>% 
                 mutate(value = row_number())
-              ) %>%
+    ) %>%
     mutate(Method = fct_reorder(Method, value))
   
   if(dimension != 0)
@@ -95,8 +100,8 @@ plot_performance <- function(results, mat_type, block_siz, oversampl, methods, s
     theme_void() +
     theme(plot.title = element_text(face = "bold"),
           line = element_blank()
-          ) 
-
+    ) 
+  
   
   for(i in 1:n_plots){
     stat <- stats[i]
@@ -104,9 +109,9 @@ plot_performance <- function(results, mat_type, block_siz, oversampl, methods, s
     plot_title <- str_c("Distributional Comparison of ", title_stat)
     plots[[i+1]] <- filtered_data %>% 
       ggplot(aes(x = .data[[stat]], color = Method)) +
-        geom_boxplot() +
-        scale_x_log10() +
-        theme_classic() +
+      geom_boxplot() +
+      scale_x_log10() +
+      theme_classic() +
       theme(
         axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -191,7 +196,7 @@ fixed_sample_dat_set <- function(results){
         p_time_LUPP = per_diff(time_LUPP_iterative_cur, time_LUPP_sketch_cur),
         p_acc_svd = per_diff(overall_accuracy_LUPP_iterative_cur, overall_accuracy_svds),
         p_acc_LUPP = per_diff(overall_accuracy_LUPP_iterative_cur, overall_accuracy_LUPP_sketch_cur),
-        ) %>% 
+      ) %>% 
       select(mat_label, n_cols, matrix_size, block_size, oversample, p_time_svd, p_time_LUPP, p_acc_svd, p_acc_LUPP)
   )
 }
@@ -215,8 +220,8 @@ split_fixed_data <- function(dataset, time_m = F, svd_m = F, better_than_it = F)
       selected_ds %>%
         rename(metric = (c_name)) %>%
         filter(metric < 0)
-        
+      
     )
   }
-
+  
 }

@@ -1,0 +1,7 @@
+mat_label,matrix_size,n_cols,LUPP_sketch_cur,svds,LUPP_iterative_cur
+kahan,30000,250,22.240049,144.398887,NA
+kahan,30000,500,NA,NA,21.637239
+kahan,30000,1000,NA,NA,26.509958
+kahan,30000,2000,NA,NA,24.920523
+kahan,30000,3000,NA,NA,40.928538
+kahan,30000,4000,NA,NA,70.20129
