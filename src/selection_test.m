@@ -1,3 +1,5 @@
+% a script that can be used to generate the csvs that are
+% clean_csvs/selection_methods
 addpath("./index_selection")
 addpath("./over_sample_res")
 addpath("./matrix_generation")
@@ -16,12 +18,16 @@ constants.epsilon = 1e-14;
 constants.block_size = 50;
 constants.over_sample = 0.0;
 ntrials = 5;
+
 A = mat_gen(mat_lab, ran, n);
 %A = gallery("lehmer", n);
 %A = eye(n) + -1 * tril(true(size(eye(n))), -1);
 %A = wilkinson(n);
+
+% to ensure the qr selection works properly the matrix must be dense
 A = full(A);
 iterations = start_rank:gap:max_rank;
+% generate all of the storage vectors
 nranks = length(iterations);
 lu_acc = zeros(nranks * ntrials, 1);
 qr_acc = zeros(nranks * ntrials, 1);
@@ -36,6 +42,7 @@ svds_acc_med = zeros(nranks, 1);
 svd_acc_med = zeros(nranks, 1);
 ranks_med = zeros(nranks, 1);
 counter = 1;
+
 St = svd(A, "vector");
 for mi = iterations
     constants.maxit = mi;
