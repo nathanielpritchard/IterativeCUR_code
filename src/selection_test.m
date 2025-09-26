@@ -1,5 +1,7 @@
 % a script that can be used to generate the csvs that are
-% clean_csvs/selection_methods
+% clean_csvs/selection_methods. You must modify this script to recreate
+% each dataset. Instructions for how things should be modified can be found
+% in comments on lines 12-48
 addpath("./index_selection")
 addpath("./over_sample_res")
 addpath("./matrix_generation")
@@ -7,21 +9,42 @@ addpath("./curers")
 addpath("./error_methods")
 addpath("./pseudoInv_update.m/")
 rng(13132,"twister");
+% specify the type of matrix you wish to test
 mat_lab = "Low_Rank_PD";
+% Specify the generation rank (this is only relevant for Low_Rank_PD)
 ran = 100;
+% Specify the size of the matrix, for these experiments this can be set to
+% 1000
 n = 1000;
-gap = 4;
-start_rank = 3;
-max_rank = 20;
+% Specify the gap between rank values this will be 
+% 200 for all experiments
+gap = 200;
+% Specify the starting rank to test this will be
+% 200: For chan and wilkinson
+% 150: For all other matrices
+start_rank = 200;
+% Specify the max rank, this will be 1000 for all matrices
+max_rank = 1000;
 constants = Test_Constants;
 constants.epsilon = 1e-14;
+% specify the block size this will be 50 for every experiment except
+% wilkinson
 constants.block_size = 50;
+% specify the oversampling parameter, this is not discussed in the paper
+% and should be set to zero to replicate results
 constants.over_sample = 0.0;
 ntrials = 5;
 
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+% uncomment the correct matrix
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+% if Low_Rank_PD or bayer08 use this like
 A = mat_gen(mat_lab, ran, n);
+% If circul, forsythe, grcar, lehmer use this line
 %A = gallery("lehmer", n);
+% If chan use this line
 %A = eye(n) + -1 * tril(true(size(eye(n))), -1);
+% If wilkinson use this line
 %A = wilkinson(n);
 
 % to ensure the qr selection works properly the matrix must be dense

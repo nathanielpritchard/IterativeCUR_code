@@ -19,7 +19,7 @@ do
 		s) S=${OPTARG};;
 		o) O=${OPTARG};;
 		e) E=${OPTARG};;
-        	i) I=${OPTARG};;
+        i) I=${OPTARG};;
 	esac
 done
 
