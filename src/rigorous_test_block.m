@@ -46,17 +46,6 @@ function [C, U, T, R] = IterativeCUR_QR_wrap(A, constants)
     [~, C, U, T, R] = IterativeCUR(A, constants.block_size, constants.rel_epsilon, constants.over_sample, @zero_residual, @idx_QR, @idx_QR, @idx_QR, @approx_error, maxit);
 end
 
-function [C, U, T, R] = IterativeCUR_QR_wrap_proj(A, constants)
-    % when maxit is zero then the function runs according to threshold
-    % otherwise it corresponds to the maxit parameter
-    if constants.maxit == 0
-        maxit = 0;
-    else
-        maxit = constants.maxit;
-    end
-    [~, C, U, T, R] = IterativeCUR(A, constants.block_size, constants.rel_epsilon, constants.over_sample, @proj_residual, @idx_QR, @idx_QR, @idx_QR, @approx_error, maxit);
-end
-
 function [C, U, T, R] = IterativeCUR_LU_wrap(A, constants)
     % when maxit is zero then the function runs according to threshold
     % otherwise it corresponds to the maxit parameter
@@ -66,17 +55,6 @@ function [C, U, T, R] = IterativeCUR_LU_wrap(A, constants)
         maxit = constants.maxit;
     end
     [~, C, U, T, R] = IterativeCUR(A, constants.block_size, constants.rel_epsilon, constants.over_sample, @zero_residual, @idx_LU, @idx_LU, @idx_LU, @approx_error, maxit);
-end
-
-function [C, U, T, R] = IterativeCUR_LU_wrap_proj(A, constants)
-    % when maxit is zero then the function runs according to threshold
-    % otherwise it corresponds to the maxit parameter
-    if constants.maxit == 0
-        maxit = 0;
-    else
-        maxit = constants.maxit;
-    end
-    [~, C, U, T, R] = IterativeCUR(A, constants.block_size, constants.rel_epsilon, constants.over_sample, @proj_residual, @idx_LU, @idx_LU, @idx_LU, @approx_error, maxit);
 end
 
 function [C, U, T, R] = curQR_wrap(A, constants)
@@ -153,14 +131,6 @@ C.rel_epsilon = C.epsilon * nA;
 %tables{end+1} = curslu_data;
 %fprintf("SLU CUR ")
 
-% i_curqr_proj_data = decomp_test(A, n_samples, @IterativeCUR_QR_wrap_proj, C, nA, false);
-% i_curqr_proj_data.("method") = repelem(["QRPP_iterative_cur_proj"], [n_samples])';
-% i_curqr_proj_data.("threshold") = repelem([C.epsilon], [n_samples])';
-% i_curqr_proj_data.("mat_label") = repelem([mat_lab], [n_samples])';
-% i_curqr_proj_filename = append("csvs/iterative_curqr_proj_", mat_lab,"_",num2str(n), "_", num2str(C.block_size),"_",num2str(C.over_sample), "_",  num2str(C.maxit), ".csv");
-% filenames{end+1} = i_curqr_proj_filename;
-% tables{end+1} = i_curqr_proj_data;
-% fprintf("Fast CURQR Proj ")
 
 %i_curqr_data = decomp_test(A, n_samples, @IterativeCUR_QR_wrap, C, nA, false);
 %i_curqr_data.("method") = repelem(["QRPP_iterative_cur"], [n_samples])';
@@ -170,15 +140,6 @@ C.rel_epsilon = C.epsilon * nA;
 %filenames{end+1} = i_curqr_filename;
 %tables{end+1} = i_curqr_data;
 %fprintf("Fast CURQR ")
-
-% i_curlu_proj_data = decomp_test(A, n_samples, @IterativeCUR_LU_wrap_proj, C, nA, false);
-% i_curlu_proj_data.("method") = repelem(["LUPP_iterative_cur_proj"], [n_samples])';
-% i_curlu_proj_data.("threshold") = repelem([C.epsilon], [n_samples])';
-% i_curlu_proj_data.("mat_label") = repelem([mat_lab], [n_samples])';
-% i_curlu_proj_filename = append("csvs/iterative_curlu_proj_", mat_lab,"_",num2str(n), "_", num2str(C.block_size),"_",num2str(C.over_sample),"_",  num2str(C.maxit),".csv");
-% filenames{end+1} = i_curlu_proj_filename;
-% tables{end+1} = i_curlu_proj_data;
-% fprintf("Fast CURLU Proj")
 
 i_curlu_data = decomp_test(A, n_samples, @IterativeCUR_LU_wrap, C, nA, false);
 i_curlu_data.("method") = repelem(["LUPP_iterative_cur"], [n_samples])';
